@@ -1,9 +1,9 @@
 import umap
-import hdbscan
 import numpy as np
 
 from tqdm import tqdm
 from collections import defaultdict
+from hdbscan import HDBSCAN, membership_vector
 
 import basty.utils.misc as misc
 
@@ -94,40 +94,37 @@ class BehaviorMapping(Project):
     def compute_semisupervised_pair_embeddings(self):
         all_expt_names = list(self.expt_path_dict.keys())
         annotated_expt_names = list(self.annotation_path_dict.keys())
-        unannotated_expt_names = [
-            expt_name
-            for expt_name in all_expt_names
-            if expt_name not in annotated_expt_names
-        ]
+        unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
         assert all_expt_names
         assert annotated_expt_names
         assert unannotated_expt_names
 
-        for unann_expt_name in unannotated_expt_names:
-            for ann_expt_name in annotated_expt_names:
-                embedding, expt_indices_dict = self.compute_behavior_space(
-                    [unann_expt_name], [ann_expt_name]
-                )
+        for ann_expt_name, unann_expt_name in misc.list_cartesian_product(
+            annotated_expt_names, unannotated_expt_names
+        ):
+            embedding, expt_indices_dict = self.compute_behavior_space(
+                [unann_expt_name], [ann_expt_name]
+            )
 
-                expt_path = self.expt_path_dict[unann_expt_name]
-                start, end = expt_indices_dict[unann_expt_name]
-                embedding_expt = embedding[start:end]
-                self._save_numpy_array(
-                    embedding_expt,
-                    expt_path / "embeddings",
-                    f"semisupervised_pair_embedding_{ann_expt_name}.npy",
-                    depth=3,
-                )
+            expt_path = self.expt_path_dict[unann_expt_name]
+            start, end = expt_indices_dict[unann_expt_name]
+            embedding_expt = embedding[start:end]
+            self._save_numpy_array(
+                embedding_expt,
+                expt_path / "embeddings",
+                f"semisupervised_pair_embedding_{ann_expt_name}.npy",
+                depth=3,
+            )
 
-                expt_path = self.expt_path_dict[ann_expt_name]
-                start, end = expt_indices_dict[ann_expt_name]
-                embedding_expt = embedding[start:end]
-                self._save_numpy_array(
-                    embedding_expt,
-                    expt_path / "embeddings",
-                    f"semisupervised_pair_embedding_{unann_expt_name}.npy",
-                    depth=3,
-                )
+            expt_path = self.expt_path_dict[ann_expt_name]
+            start, end = expt_indices_dict[ann_expt_name]
+            embedding_expt = embedding[start:end]
+            self._save_numpy_array(
+                embedding_expt,
+                expt_path / "embeddings",
+                f"semisupervised_pair_embedding_{unann_expt_name}.npy",
+                depth=3,
+            )
 
     @misc.timeit
     def compute_unsupervised_embeddings(self):
@@ -197,14 +194,18 @@ class BehaviorMapping(Project):
                 depth=3,
             )
 
-    def jointly_cluster_embeddings(self, expt_names, embedding_name):
+    def jointly_cluster_embeddings(self, expt_names, embedding_names):
         embedding_expt_dict = defaultdict()
         expt_indices_dict = defaultdict(tuple)
-        embedding_name_msg = " ".join(embedding_name.split("_"))
 
         prev = 0
         pbar = tqdm(expt_names)
-        for expt_name in pbar:
+        for i, expt_name in enumerate(pbar):
+            embedding_name = embedding_names[i]
+            embedding_name_msg = " ".join(embedding_name.split("_"))
+            self.logger.direct_info(
+                f"Loading {embedding_name_msg} for joint clustering of all experiments."
+            )
             expt_path = self.expt_path_dict[expt_name]
             embedding_expt = self._load_numpy_array(
                 expt_path / "embeddings", f"{embedding_name}.npy"
@@ -214,15 +215,13 @@ class BehaviorMapping(Project):
             expt_indices_dict[expt_name] = prev, prev + embedding_expt.shape[0]
             prev = expt_indices_dict[expt_name][-1]
 
-        self.logger.direct_info(
-            f"Joint clustering {embedding_name_msg} of all experiments."
-        )
         embedding = np.concatenate(list(embedding_expt_dict.values()), axis=0)
-        clusterer = hdbscan.HDBSCAN(**self.HDBSCAN_kwargs)
+        clusterer = HDBSCAN(**self.HDBSCAN_kwargs)
         cluster_labels = (clusterer.fit_predict(embedding) + 1).astype(int)
 
         pbar = tqdm(expt_names)
-        for expt_name in pbar:
+        for i, expt_name in enumerate(pbar):
+            embedding_name = embedding_names[i]
             expt_path = self.expt_path_dict[expt_name]
             start, end = expt_indices_dict[expt_name]
             expt_indices_dict[expt_name] = prev, prev + embedding_expt.shape[0]
@@ -236,26 +235,42 @@ class BehaviorMapping(Project):
 
     def jointly_cluster_supervised_joint_embeddings(self):
         ann_expt_names = list(self.annotation_path_dict.keys())
-        embedding_name = "supervised_joint_embedding"
-        self.jointly_cluster_embeddings(ann_expt_names, embedding_name)
+        embedding_names = ["supervised_joint_embedding" for _ in ann_expt_names]
+        self.jointly_cluster_embeddings(ann_expt_names, embedding_names)
 
     def jointly_cluster_unsupervised_joint_embeddings(self):
         all_expt_names = list(self.expt_path_dict.keys())
-        embedding_name = "unsupervised_joint_embedding"
-        self.jointly_cluster_embeddings(all_expt_names, embedding_name)
+        embedding_names = ["unsupervised_joint_embedding" for _ in all_expt_names]
+        self.jointly_cluster_embeddings(all_expt_names, embedding_names)
 
-    def disparately_cluster_embeddings(self, expt_names, embedding_name):
-        embedding_name_msg = " ".join(embedding_name.split("_"))
+    def jointly_cluster_semisupervised_pair_embeddings(self):
+        all_expt_names = list(self.expt_path_dict.keys())
+        annotated_expt_names = list(self.annotation_path_dict.keys())
+        unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
+        for ann_expt_name, unann_expt_name in misc.list_cartesian_product(
+            annotated_expt_names, unannotated_expt_names
+        ):
+            embedding_names = [
+                f"semisupervised_pair_embedding_{ann_expt_name}",
+                f"semisupervised_pair_embedding_{unann_expt_name}",
+            ]
+            self.jointly_cluster_embeddings(
+                [unann_expt_name, ann_expt_name], embedding_names
+            )
+
+    def disparately_cluster_embeddings(self, expt_names, embedding_names):
         pbar = tqdm(expt_names)
-        for expt_name in pbar:
+        for i, expt_name in enumerate(pbar):
+            embedding_name = embedding_names[i]
+            embedding_name_msg = " ".join(embedding_name.split("_"))
             pbar.set_description(
-                f"Individual clustering {embedding_name_msg} of {expt_name}"
+                f"Disparately clustering {embedding_name_msg} of {expt_name}"
             )
             expt_path = self.expt_path_dict[expt_name]
             embedding_expt = self._load_numpy_array(
                 expt_path / "embeddings", f"{embedding_name}.npy"
             )
-            clusterer = hdbscan.HDBSCAN(**self.HDBSCAN_kwargs)
+            clusterer = HDBSCAN(**self.HDBSCAN_kwargs)
             cluster_labels = (clusterer.fit_predict(embedding_expt) + 1).astype(int)
             self._save_numpy_array(
                 cluster_labels,
@@ -265,21 +280,93 @@ class BehaviorMapping(Project):
             )
 
     def disparately_cluster_supervised_joint_embeddings(self):
-        embedding_name = "supervised_joint_embedding"
         annotated_expt_names = list(self.annotation_path_dict.keys())
+        embedding_name = ["supervised_joint_embedding" for _ in annotated_expt_names]
         self.disparately_cluster_embeddings(annotated_expt_names, embedding_name)
 
     def disparately_cluster_unsupervised_joint_embeddings(self):
-        embedding_name = "unsupervised_joint_embedding"
         all_expt_names = list(self.expt_path_dict.keys())
+        embedding_name = ["unsupervised_joint_embedding" for _ in all_expt_names]
         self.disparately_cluster_embeddings(all_expt_names, embedding_name)
 
     def disparately_cluster_supervised_embeddings(self):
-        embedding_name = "supervised_embedding"
         annotated_expt_names = list(self.annotation_path_dict.keys())
+        embedding_name = ["supervised_embedding" for _ in annotated_expt_names]
         self.disparately_cluster_embeddings(annotated_expt_names, embedding_name)
 
     def disparately_cluster_unsupervised_embeddings(self):
-        embedding_name = "unsupervised_embedding"
         all_expt_names = list(self.expt_path_dict.keys())
+        embedding_name = ["unsupervised_embedding" for _ in all_expt_names]
         self.disparately_cluster_embeddings(all_expt_names, embedding_name)
+
+    def disparately_cluster_semisupervised_pair_embeddings(self):
+        all_expt_names = list(self.expt_path_dict.keys())
+        annotated_expt_names = list(self.annotation_path_dict.keys())
+        unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
+        for ann_expt_name, unann_expt_name in misc.list_cartesian_product(
+            annotated_expt_names, unannotated_expt_names
+        ):
+            embedding_names = [f"semisupervised_pair_embedding_{unann_expt_name}"]
+            self.disparately_cluster_embeddings([ann_expt_name], embedding_names)
+            # Not really needed.
+            # embedding_names = [f"semisupervised_pair_embedding_{ann_expt_name}"]
+            # self.disparately_cluster_embeddings([unann_expt_name], embedding_names)
+
+    def compute_cross_pair_cluster_membership(
+        self, expt_name1, expt_name2, embedding_name1, embedding_name2
+    ):
+        if expt_name1 in embedding_name2 and expt_name2 in embedding_name1:
+            approach1 = embedding_name2.replace(expt_name1, "")
+            approach2 = embedding_name1.replace(expt_name2, "")
+        else:
+            approach1 = embedding_name1
+            approach2 = embedding_name2
+
+        is_same_approach = approach1 == approach2
+
+        if not is_same_approach:
+            self.logger.direct_error(
+                f"Given embedding approaches {approach1} and {approach2}) are not same."
+                "Hence they are not compatible."
+            )
+            raise ValueError
+
+        expt_path1 = self.expt_path_dict[expt_name1]
+        expt_path2 = self.expt_path_dict[expt_name2]
+
+        embedding_expt1 = self._load_numpy_array(
+            expt_path1 / "embeddings", f"{embedding_name1}.npy"
+        )
+        embedding_expt2 = self._load_numpy_array(
+            expt_path2 / "embeddings", f"{embedding_name2}.npy"
+        )
+
+        clusterer = HDBSCAN(**self.HDBSCAN_kwargs)
+        clusterer.fit(embedding_expt1)
+        cluster_membership = membership_vector(clusterer, embedding_expt2)
+
+        self._save_numpy_array(
+            cluster_membership,
+            expt_path2 / "cluster_labels",
+            f"cross_pair_cluster_membership_{embedding_name2}_{embedding_name1}.npy",
+            depth=3,
+        )
+
+    def cross_pair_cluster_membership_semisupervised_pair_embeddings(self):
+        all_expt_names = list(self.expt_path_dict.keys())
+        annotated_expt_names = list(self.annotation_path_dict.keys())
+        unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
+
+        pbar = tqdm(
+            misc.list_cartesian_product(annotated_expt_names, unannotated_expt_names)
+        )
+        for ann_expt_name, unann_expt_name in pbar:
+            ann_embedding_name = f"semisupervised_pair_embedding_{unann_expt_name}"
+            unann_embedding_name = f"semisupervised_pair_embedding_{ann_expt_name}"
+            self.compute_cross_pair_cluster_membership(
+                ann_expt_name, unann_expt_name, ann_embedding_name, unann_embedding_name
+            )
+            # Not really needed.
+            # self.compute_cross_pair_cluster_membership(
+            #     unann_expt_name, ann_expt_name, unann_embedding_name, ann_embedding_name
+            # )

@@ -25,6 +25,19 @@ class OutlineMixin:
         return cont_intvls_dict
 
     @staticmethod
+    def postprocess_outlines(mask_postive, winsize, wintype="boxcar"):
+        win_positive_counts = BehavioralWindows.get_behavior_counts(
+            mask_postive.astype(int),
+            wintype=wintype,
+            winsize=winsize,
+            stepsize=1,
+        )
+        mask_postive = np.array(
+            [np.argmax(counts) for counts in (win_positive_counts)]
+        ).astype(bool)
+        return mask_postive
+
+    @staticmethod
     def get_datums_values(df_values, datums=[], winsize=3):
         assert isinstance(df_values, pd.DataFrame) and df_values.ndim == 2
 
@@ -141,19 +154,6 @@ class SummaryCoefsCWT:
 
 
 class ActiveBouts(UnsupervisedOutline, SupervisedOutline, SummaryCoefsCWT):
-    @staticmethod
-    def postprocess_bouts(mask_active, winsize, wintype="boxcar"):
-        win_active_counts = BehavioralWindows.get_behavior_counts(
-            mask_active.astype(int),
-            wintype=wintype,
-            winsize=winsize,
-            stepsize=1,
-        )
-        mask_active = np.array(
-            [np.argmax(win_active_counts[i, :]) for i in range(len(win_active_counts))]
-        ).astype(bool)
-        return mask_active
-
     @classmethod
     def compute_active_bouts(cls, values, thresholds, winsize=30, wintype="boxcar"):
         assert isinstance(values, np.ndarray) and values.ndim == 2
@@ -168,7 +168,7 @@ class ActiveBouts(UnsupervisedOutline, SupervisedOutline, SummaryCoefsCWT):
             active_mask_per_datums.append(mask_active_tmp)
             mask_active = np.logical_or(mask_active, mask_active_tmp)
 
-        mask_active = cls.postprocess_bouts(
+        mask_active = cls.postprocess_outlines(
             mask_active, winsize=winsize, wintype="boxcar"
         )
 

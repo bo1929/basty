@@ -1,9 +1,15 @@
 import time
+import itertools
 import textwrap
 import logging
 import numpy as np
 
 from collections import Counter
+
+
+def list_cartesian_product(*args):
+    assert all([isinstance(list_arg, list) for list_arg in args])
+    return itertools.product(*args)
 
 
 def dict_check_and_sort(x):

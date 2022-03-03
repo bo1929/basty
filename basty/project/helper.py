@@ -98,10 +98,25 @@ class ParameterHandler:
 
     def init_behavior_embeddings_kwargs(self, **kwargs):
         self.UMAP_kwargs = {}
-        pass
+        self.UMAP_kwargs["n_neighbors"] = kwargs.get("embedding_n_negihbors", 90)
+        self.UMAP_kwargs["min_dist"] = kwargs.get("embedding_min_dist", 0.0)
+        self.UMAP_kwargs["spread"] = kwargs.get("embedding_spread", 1.0)
+        self.UMAP_kwargs["n_components"] = kwargs.get("embedding_n_components", 2)
+        self.UMAP_kwargs["metric"] = kwargs.get("embedding_metric", "hellinger")
+        self.UMAP_kwargs["low_memory"] = kwargs.get("embedding_low_memory", True)
 
     def init_behavior_clustering_kwargs(self, **kwargs):
         self.HDBSCAN_kwargs = {}
+        self.HDBSCAN_kwargs["prediction_data"] = True
+        self.HDBSCAN_kwargs["approx_min_span_tree"] = True
+        self.HDBSCAN_kwargs["cluster_selection_method"] = kwargs.get(
+            "cluster_selection_method", "eom"
+        )
+        self.HDBSCAN_kwargs["cluster_selection_epsilon"] = kwargs.get(
+            "cluster_selection_epsilon", 0.0
+        )
+        self.HDBSCAN_kwargs["min_cluster_size"] = kwargs.get("min_cluster_size", 500)
+        self.HDBSCAN_kwargs["min_samples"] = kwargs.get("min_cluster_samples", 5)
 
     def init_mapping_postprocessing_kwargs(self, **kwargs):
         pass
