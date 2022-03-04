@@ -10,9 +10,22 @@ class AnnotationInfo:
     def __init__(self):
         # no annotation by default
         self.has_annotation = False
+        self._inactive_behavior = None
         self._label_to_behavior = None
         self._behavior_to_label = None
         self._mask_annotated = None
+
+    @property
+    def inactive_behavior(self):
+        if self._inactive_behavior is None:
+            raise ValueError("'inactive_behavior' is not set.")
+        return self._inactive_behavior
+
+    @inactive_behavior.setter
+    def inactive_behavior(self, value):
+        if not isinstance(value, str):
+            raise ValueError("'inactive_behavior' must have type 'str'.")
+        self._inactive_behavior = value
 
     @property
     def mask_annotated(self):

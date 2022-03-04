@@ -9,6 +9,7 @@ class HumanAnnotations:
     def __init__(self, ann_path, inactive_behavior="Idle"):
         self.df_ann = pd.read_csv(ann_path)
 
+        # Label of the inactive behavior is always zero.
         self.inactive_behavior = inactive_behavior
         self.behavior_to_label = {}
         self.multibehavior_to_label = {}

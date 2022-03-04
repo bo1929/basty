@@ -370,3 +370,109 @@ class BehaviorMapping(Project):
             # self.compute_cross_pair_cluster_membership(
             #     unann_expt_name, ann_expt_name, unann_embedding_name, ann_embedding_name
             # )
+
+    def map_cluster_labels_to_behavior_labels(self, expt_name, clustering_name):
+        expt_path = self.expt_path_dict[expt_name]
+        expt_record = self._load_joblib_object(expt_path, "expt_record.z")
+
+        assert expt_record.has_annotation
+        y_ann = self._load_numpy_array(expt_path, "annotations.npy")
+
+        unsupervised_embedding_names = [
+            "unsupervised_embedding",
+            "unsupervised_joint_embedding",
+        ]
+        if any([name in clustering_name for name in unsupervised_embedding_names]):
+            y_ann = y_ann[expt_record.mask_dormant & expt_record.mask_active]
+        else:
+            y_ann = y_ann[expt_record.mask_annotated]
+
+        y_cluster = self._load_numpy_array(
+            expt_path / "cluster_labels", f"{clustering_name}.npy"
+        )
+
+        mapping_dictionary = defaultdict(dict)
+        y_cluster_uniq = np.unique(y_cluster)
+        for cluster_lbl in y_cluster_uniq:
+            y_ann_masked = y_ann[y_cluster == cluster_lbl]
+            y_ann_uniq_c, ann_uniq_c_counts = np.unique(
+                y_ann_masked, return_counts=True
+            )
+            for idx, ann_lbl in enumerate(y_ann_uniq_c):
+                # mapping_dictionary[int(cluster_lbl)][int(ann_lbl)] = float(
+                #     ann_uniq_c_counts[idx] / y_ann_masked.shape[0]
+                # )
+                ann_behavior = expt_record.label_to_behavior[ann_lbl]
+                mapping_dictionary[int(cluster_lbl)][ann_behavior] = float(
+                    ann_uniq_c_counts[idx] / y_ann_masked.shape[0]
+                )
+
+        self._save_yaml_dictionary(
+            dict(mapping_dictionary),
+            expt_path / "behavior_labels",
+            f"mapping_{clustering_name}.yaml",
+        )
+
+    def map_disparate_cluster_labels_semisupervised_pair_embeddings(self):
+        all_expt_names = list(self.expt_path_dict.keys())
+        annotated_expt_names = list(self.annotation_path_dict.keys())
+        unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
+        for ann_expt_name, unann_expt_name in misc.list_cartesian_product(
+            annotated_expt_names, unannotated_expt_names
+        ):
+            embedding_name = f"semisupervised_pair_embedding_{unann_expt_name}"
+            clustering_name = f"disparate_cluster_labels_{embedding_name}"
+            self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
+
+    def map_disparate_cluster_labels_supervised_embeddings(self):
+        annotated_expt_names = list(self.annotation_path_dict.keys())
+        for ann_expt_name in annotated_expt_names:
+            embedding_name = "supervised_embedding"
+            clustering_name = f"disparate_cluster_labels_{embedding_name}"
+            self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
+
+    def map_disparate_cluster_labels_supervised_joint_embeddings(self):
+        annotated_expt_names = list(self.annotation_path_dict.keys())
+        for ann_expt_name in annotated_expt_names:
+            embedding_name = "supervised_joint_embedding"
+            clustering_name = f"disparate_cluster_labels_{embedding_name}"
+            self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
+
+    def map_disparate_cluster_labels_unsupervised_embeddings(self):
+        annotated_expt_names = list(self.annotation_path_dict.keys())
+        for ann_expt_name in annotated_expt_names:
+            embedding_name = "unsupervised_embedding"
+            clustering_name = f"disparate_cluster_labels_{embedding_name}"
+            self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
+
+    def map_disparate_cluster_labels_unsupervised_joint_embeddings(self):
+        annotated_expt_names = list(self.annotation_path_dict.keys())
+        for ann_expt_name in annotated_expt_names:
+            embedding_name = "unsupervised_joint_embedding"
+            clustering_name = f"disparate_cluster_labels_{embedding_name}"
+            self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
+
+    def map_joint_cluster_labels_semisupervised_pair_embeddings(self):
+        all_expt_names = list(self.expt_path_dict.keys())
+        annotated_expt_names = list(self.annotation_path_dict.keys())
+        unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
+        for ann_expt_name, unann_expt_name in misc.list_cartesian_product(
+            annotated_expt_names, unannotated_expt_names
+        ):
+            embedding_name = f"semisupervised_pair_embedding_{unann_expt_name}"
+            clustering_name = f"joint_cluster_labels_{embedding_name}"
+            self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
+
+    def map_joint_cluster_labels_supervised_joint_embeddings(self):
+        annotated_expt_names = list(self.annotation_path_dict.keys())
+        for ann_expt_name in annotated_expt_names:
+            embedding_name = "supervised_joint_embedding"
+            clustering_name = f"joint_cluster_labels_{embedding_name}"
+            self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
+
+    def map_joint_cluster_labels_unsupervised_joint_embeddings(self):
+        annotated_expt_names = list(self.annotation_path_dict.keys())
+        for ann_expt_name in annotated_expt_names:
+            embedding_name = "unsupervised_joint_embedding"
+            clustering_name = f"joint_cluster_labels_{embedding_name}"
+            self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)

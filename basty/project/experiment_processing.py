@@ -120,7 +120,6 @@ class Project(ParameterHandler, LoadingHelper, SavingHelper):
             io.safe_create_dir(expt_path)
             io.safe_create_dir(expt_path / "embeddings")
             io.safe_create_dir(expt_path / "cluster_labels")
-            io.safe_create_dir(expt_path / "behavior_labels")
 
             if not (expt_path / "expt_record.z").exists():
                 expt_record = ExptRecord(
@@ -152,8 +151,9 @@ class Project(ParameterHandler, LoadingHelper, SavingHelper):
 
                 expt_record = self._load_joblib_object(expt_path, "expt_record.z")
                 expt_record.has_annotation = True
-                expt_record._label_to_behavior = annotator.label_to_behavior
-                expt_record._behavior_to_label = annotator.behavior_to_label
+                expt_record.inactive_behavior = annotator.inactive_behavior
+                expt_record.label_to_behavior = annotator.label_to_behavior
+                expt_record.behavior_to_label = annotator.behavior_to_label
                 expt_record.mask_annotated = (
                     annotator.behavior_to_label[annotator.inactive_behavior] != y_ann
                 )
@@ -163,6 +163,7 @@ class Project(ParameterHandler, LoadingHelper, SavingHelper):
                     "expt_record.z",
                     "with annotation information",
                 )
+                io.safe_create_dir(expt_path / "behavior_labels")
             # else:
             #     self.logger.file_already_exists(
             #         "annotations.npy", expt_path / "annotations.npy", depth=2
