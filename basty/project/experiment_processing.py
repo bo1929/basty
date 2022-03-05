@@ -119,7 +119,8 @@ class Project(ParameterHandler, LoadingHelper, SavingHelper):
             self.expt_path_dict[name] = expt_path
             io.safe_create_dir(expt_path)
             io.safe_create_dir(expt_path / "embeddings")
-            io.safe_create_dir(expt_path / "cluster_labels")
+            io.safe_create_dir(expt_path / "clusterings")
+            io.safe_create_dir(expt_path / "mappings")
 
             if not (expt_path / "expt_record.z").exists():
                 expt_record = ExptRecord(
@@ -136,13 +137,18 @@ class Project(ParameterHandler, LoadingHelper, SavingHelper):
         self.annotation_path_dict = self.main_cfg.get("annotation_paths", {})
 
         pbar = tqdm(self.annotation_path_dict.items())
-        for name, ann_path in pbar:
+        for idx, (name, ann_path) in enumerate(pbar):
             expt_path = self.expt_path_dict[name]
 
             if not (expt_path / "annotations.npy").exists():
                 pbar.set_description(f"Processing human annotations of {name}")
 
                 annotator = HumAnn(ann_path)
+
+                if idx > 0:
+                    assert annotator.behavior_to_label == expt_record.behavior_to_label
+                    assert annotator.label_to_behavior == expt_record.label_to_behavior
+
                 y_ann_list = annotator.get_annotations()
                 y_ann = annotator.label_converter(
                     y_ann_list, priority_order=self.annotation_priority
@@ -163,7 +169,6 @@ class Project(ParameterHandler, LoadingHelper, SavingHelper):
                     "expt_record.z",
                     "with annotation information",
                 )
-                io.safe_create_dir(expt_path / "behavior_labels")
             # else:
             #     self.logger.file_already_exists(
             #         "annotations.npy", expt_path / "annotations.npy", depth=2

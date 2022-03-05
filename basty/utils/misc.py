@@ -144,10 +144,13 @@ def timeit(f):
 
     def wrapper(*args, **kwargs):
         logger = logging.getLogger("main")
+        logging.info("...")
+        logging.basicConfig()
         logger.info(f"Started: {f.__qualname__}.")
         t = time.time()
         res = f(*args, **kwargs)
         logger.info(f"Finished: {f.__qualname__} elapsed: {time.time() - t:.2f}s.")
+        logging.info("...")
         return res
 
     return wrapper

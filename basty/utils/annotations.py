@@ -6,24 +6,30 @@ import basty.utils.misc as misc
 
 
 class HumanAnnotations:
-    def __init__(self, ann_path, inactive_behavior="Idle"):
-        self.df_ann = pd.read_csv(ann_path)
-
+    def __init__(self, ann_path=None, inactive_behavior="Idle"):
         # Label of the inactive behavior is always zero.
         self.inactive_behavior = inactive_behavior
         self.behavior_to_label = {}
         self.multibehavior_to_label = {}
 
-        behaviors_uniq = [
-            behavior
-            for behavior in self.df_ann["Behavior"].unique()
-            if behavior != self.inactive_behavior
-        ]
         self.behavior_to_label[self.inactive_behavior] = 0
         self.multibehavior_to_label[self.inactive_behavior] = 0
-        for i, bhv in enumerate(sorted(behaviors_uniq)):
-            self.behavior_to_label[bhv] = i + 1
-            self.multibehavior_to_label[bhv] = i + 1
+
+        if ann_path is not None:
+            self.df_ann = pd.read_csv(ann_path)
+            behaviors_uniq = [
+                behavior
+                for behavior in self.df_ann["Behavior"].unique()
+                if behavior != self.inactive_behavior
+            ]
+            for i, bhv in enumerate(sorted(behaviors_uniq)):
+                self.behavior_to_label[bhv] = i + 1
+                self.multibehavior_to_label[bhv] = i + 1
+            self.df_ann = self.df_ann.query("Beginning != End")
+        else:
+            self.df_ann = pd.DataFrame()
+            behaviors_uniq = []
+
         self.label_to_behavior = misc.reverse_dict(self.behavior_to_label)
         self.label_to_multibehavior = misc.reverse_dict(self.multibehavior_to_label)
 
@@ -43,6 +49,7 @@ class HumanAnnotations:
 
     def compile_annotations(self, ann_dir, ann_out_path, num_of_frames):
         annotations = {}
+        missing_annotations = {}
         for path in pathlib.Path(ann_dir).glob("*.csv"):
             bhv = "-".join(path.stem.split("-")[-1].split("_"))
             try:
@@ -53,8 +60,12 @@ class HumanAnnotations:
                 )
                 annotations[bhv] = df_tmp
             except pd.errors.EmptyDataError:
-                annotations[bhv] = pd.DataFrame()
+                df_tmp = pd.DataFrame.from_dict(
+                    {"Beginning": [-1], "End": [-1], "Behavior": [bhv]}
+                )
+                missing_annotations[bhv] = df_tmp
 
+        df_missing_ann = pd.concat(missing_annotations.values()).reset_index(drop=True)
         df_ann = (
             pd.concat(annotations.values())
             .sort_values("Beginning")
@@ -75,7 +86,7 @@ class HumanAnnotations:
             ann_stop_dict["End"].append(df_ann["Beginning"].iloc[0] - 1)
 
         df_ann = (
-            pd.concat((df_ann, pd.DataFrame.from_dict(ann_stop_dict)))
+            pd.concat((df_missing_ann, df_ann, pd.DataFrame.from_dict(ann_stop_dict)))
             .sort_values("Beginning")
             .reset_index(drop=True)
         )
