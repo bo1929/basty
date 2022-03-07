@@ -27,6 +27,9 @@ class ParameterHandler:
 
     def init_annotation_kwargs(self, **kwargs):
         self.annotation_priority = kwargs.pop("annotation_priority", [])
+        self.inactive_annotation = kwargs.pop("inactive_annotation", "Idle")
+        self.noise_annotation = kwargs.pop("noise_annotation", "Noise")
+        self.arouse_annotation = kwargs.pop("arouse_annotation", "Moving")
 
     def init_preprocessing_kwargs(self, **kwargs):
         self.compute_oriented_pose = kwargs.pop("compute_oriented_pose", True)
@@ -51,13 +54,11 @@ class ParameterHandler:
         self.interpolation_method = kwargs.pop("interpolation_method", "linear")
         self.interpolation_kwargs = kwargs.pop("interpolation_kwargs", {})
         self.kalman_filter_kwargs = kwargs.pop("kalman_filter_kwargs", {})
-        assert not kwargs
 
     def init_behavioral_reprs_kwargs(self, **kwargs):
         self.use_cartesian_blent = kwargs.pop("use_cartesian_blent", False)
         self.norm = kwargs.pop("norm", "l1")
         assert self.norm in ["l1", "l2", "max"]
-        assert not kwargs
 
     def init_dormant_epochs_kwargs(self, fps, use_supervised_learning, **kwargs):
         self.datums = kwargs.pop("datums", [])
@@ -86,7 +87,6 @@ class ParameterHandler:
             self.decision_tree_kwargs = self.__class__.decision_tree_default_kwargs(
                 **kwargs
             )
-        assert not kwargs
 
     @staticmethod
     def decision_tree_default_kwargs(**kwargs):
@@ -119,7 +119,6 @@ class ParameterHandler:
             self.decision_tree_kwargs = self.__class__.decision_tree_default_kwargs(
                 **kwargs
             )
-        assert not kwargs
 
     def init_behavior_embeddings_kwargs(self, **kwargs):
         self.UMAP_kwargs = {}
@@ -130,7 +129,6 @@ class ParameterHandler:
         self.UMAP_kwargs["metric"] = kwargs.pop("embedding_metric", "hellinger")
         self.UMAP_kwargs["low_memory"] = kwargs.pop("embedding_low_memory", True)
         self.UMAP_kwargs = {**self.UMAP_kwargs, **kwargs}
-        assert not kwargs
 
     def init_behavior_clustering_kwargs(self, **kwargs):
         self.HDBSCAN_kwargs = {}
@@ -145,7 +143,6 @@ class ParameterHandler:
         self.HDBSCAN_kwargs["min_cluster_size"] = kwargs.pop("min_cluster_size", 500)
         self.HDBSCAN_kwargs["min_samples"] = kwargs.pop("min_cluster_samples", 5)
         self.HDBSCAN_kwargs = {**self.HDBSCAN_kwargs, **kwargs}
-        assert not kwargs
 
     def init_mapping_postprocessing_kwargs(self, **kwargs):
         pass

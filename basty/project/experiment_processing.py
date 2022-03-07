@@ -144,7 +144,12 @@ class Project(ParameterHandler, LoadingHelper, SavingHelper):
             if not (expt_path / "annotations.npy").exists():
                 self.logger.direct_info(f"Processing human annotations of {name}")
 
-                annotator = HumAnn(ann_path)
+                annotator = HumAnn(
+                    ann_path,
+                    inactive_annotation=self.inactive_annotation,
+                    noise_annotation=self.noise_annotation,
+                    arouse_annotation=self.arouse_annotation,
+                )
 
                 if idx > 0:
                     assert annotator.behavior_to_label == expt_record.behavior_to_label
