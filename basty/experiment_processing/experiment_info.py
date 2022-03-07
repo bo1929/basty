@@ -10,22 +10,35 @@ class AnnotationInfo:
     def __init__(self):
         # no annotation by default
         self.has_annotation = False
-        self._inactive_behavior = None
+        self._inactive_annotation = None
+        self._noise_annotation = None
         self._label_to_behavior = None
         self._behavior_to_label = None
         self._mask_annotated = None
 
     @property
-    def inactive_behavior(self):
-        if self._inactive_behavior is None:
-            raise ValueError("'inactive_behavior' is not set.")
-        return self._inactive_behavior
+    def noise_annotation(self):
+        if self._noise_annotation is None:
+            raise ValueError("'noise_annotation' is not set.")
+        return self._noise_annotation
 
-    @inactive_behavior.setter
-    def inactive_behavior(self, value):
+    @noise_annotation.setter
+    def noise_annotation(self, value):
         if not isinstance(value, str):
-            raise ValueError("'inactive_behavior' must have type 'str'.")
-        self._inactive_behavior = value
+            raise ValueError("'noise_annotation' must have type 'str'.")
+        self._noise_annotation = value
+
+    @property
+    def inactive_annotation(self):
+        if self._inactive_annotation is None:
+            raise ValueError("'inactive_annotation' is not set.")
+        return self._inactive_annotation
+
+    @inactive_annotation.setter
+    def inactive_annotation(self, value):
+        if not isinstance(value, str):
+            raise ValueError("'inactive_annotation' must have type 'str'.")
+        self._inactive_annotation = value
 
     @property
     def mask_annotated(self):
@@ -75,6 +88,7 @@ class ExptInfo:
         self._part_to_frame_count = None
         self._mask_dormant = None
         self._mask_active = None
+        self._mask_noise = None
         self._ftname_to_snapft = None
         self._ftname_to_deltaft = None
         self._snapft_to_ftname = None
@@ -97,7 +111,13 @@ class ExptInfo:
     def mask_dormant(self):
         if self._mask_dormant is None:
             raise ValueError("'mask_dormant' is not set.")
-        return self._mask_dormant
+        if self._mask_noise is not None:
+            mask_dormant = np.logical_and(
+                self._mask_dormant, np.logical_not(self._mask_noise)
+            )
+        else:
+            mask_dormant = self._mask_dormant
+        return mask_dormant
 
     @mask_dormant.setter
     def mask_dormant(self, value):

@@ -6,25 +6,37 @@ import basty.utils.misc as misc
 
 
 class HumanAnnotations:
-    def __init__(self, ann_path=None, inactive_behavior="Idle"):
+    def __init__(
+        self,
+        ann_path=None,
+        inactive_annotation="Idle",
+        noise_annotation="Noise",
+        arouse_annotation="Moving",
+    ):
         # Label of the inactive behavior is always zero.
-        self.inactive_behavior = inactive_behavior
+        self.inactive_annotation = inactive_annotation
+        self.noise_annotation = noise_annotation
+        self.arouse_annotation = arouse_annotation
         self.behavior_to_label = {}
         self.multibehavior_to_label = {}
 
-        self.behavior_to_label[self.inactive_behavior] = 0
-        self.multibehavior_to_label[self.inactive_behavior] = 0
+        self.behavior_to_label[self.inactive_annotation] = 0
+        self.multibehavior_to_label[self.inactive_annotation] = 0
+        self.behavior_to_label[self.arouse_annotation] = 1
+        self.multibehavior_to_label[self.arouse_annotation] = 1
+        self.behavior_to_label[self.noise_annotation] = 2
+        self.multibehavior_to_label[self.noise_annotation] = 2
 
         if ann_path is not None:
             self.df_ann = pd.read_csv(ann_path)
             behaviors_uniq = [
                 behavior
                 for behavior in self.df_ann["Behavior"].unique()
-                if behavior != self.inactive_behavior
+                if behavior != self.inactive_annotation
             ]
             for i, bhv in enumerate(sorted(behaviors_uniq)):
-                self.behavior_to_label[bhv] = i + 1
-                self.multibehavior_to_label[bhv] = i + 1
+                self.behavior_to_label[bhv] = i + 3
+                self.multibehavior_to_label[bhv] = i + 3
             self.df_ann = self.df_ann.query("Beginning != End")
         else:
             self.df_ann = pd.DataFrame()
@@ -73,7 +85,7 @@ class HumanAnnotations:
         )
         ann_stop_dict = {"Beginning": [], "End": [], "Behavior": []}
         for i in range(df_ann.shape[0]):
-            ann_stop_dict["Behavior"].append(self.inactive_behavior)
+            ann_stop_dict["Behavior"].append(self.inactive_annotation)
             ann_stop_dict["Beginning"].append(df_ann["End"].iloc[i] + 1)
             if i == df_ann.shape[0] - 1:
                 ann_stop_dict["End"].append(num_of_frames)
@@ -81,7 +93,7 @@ class HumanAnnotations:
                 ann_stop_dict["End"].append(df_ann["Beginning"].iloc[i + 1] - 1)
 
         if df_ann["Beginning"].iloc[0] != 0:
-            ann_stop_dict["Behavior"].append(self.inactive_behavior)
+            ann_stop_dict["Behavior"].append(self.inactive_annotation)
             ann_stop_dict["Beginning"].append(0)
             ann_stop_dict["End"].append(df_ann["Beginning"].iloc[0] - 1)
 
@@ -126,7 +138,8 @@ class HumanAnnotations:
                     [
                         self.label_to_multibehavior[y_ann_i[j]]
                         for j in range(len(y_ann_i))
-                        if y_ann_i[j] != self.behavior_to_label[self.inactive_behavior]
+                        if y_ann_i[j]
+                        != self.behavior_to_label[self.inactive_annotation]
                     ]
                 )
                 lbl_ann = self.multibehavior_to_label.get(name_ann, False)

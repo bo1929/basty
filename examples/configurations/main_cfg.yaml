@@ -1,0 +1,25 @@
+# Please always use absolute paths in this configuration file.
+project_path: "./project-test"
+
+configuration_paths:
+  feature_cfg: "./configurations/feature_cfg.yaml"
+  temporal_cfg: "./configurations/temporal_cfg.yaml"
+  pose_cfg: "./configurations/pose_cfg.yaml"
+
+experiment_data_paths:
+  # name: path to directory
+  #   Input file format is name-index.csv, other files will be ignored.
+  #   Index is a number, consecutive files will be concatenated.  If
+  #   indeces are not consecutive will, raise an error. Indices can start
+  #   from any nonnegative integer, time-stamps will be handled
+  #   accordingly.
+  FlyF-Test1: "./datasets/"
+  FlyF-Test2: "./datasets/"
+  FlyF-Test3: "./datasets/"
+  FlyF-Test4: "./datasets/"
+
+# Optional.
+annotation_paths:
+  # name: path to file
+  FlyF-Test1: "./annotations/FlyF-Test1.csv"
+  FlyF-Test2: "./annotations/FlyF-Test2.csv"

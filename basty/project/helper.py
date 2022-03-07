@@ -26,97 +26,126 @@ class ParameterHandler:
         pass
 
     def init_annotation_kwargs(self, **kwargs):
-        self.annotation_priority = kwargs.get("annotation_priority", [])
+        self.annotation_priority = kwargs.pop("annotation_priority", [])
 
     def init_preprocessing_kwargs(self, **kwargs):
-        self.compute_oriented_pose = kwargs.get("compute_oriented_pose", True)
-        self.compute_egocentric_frames = kwargs.get("compute_egocentric_frames", False)
-        self.save_likelihood = kwargs.get("save_likelihood", False)
+        self.compute_oriented_pose = kwargs.pop("compute_oriented_pose", True)
+        self.compute_egocentric_frames = kwargs.pop("compute_egocentric_frames", False)
+        self.save_likelihood = kwargs.pop("save_likelihood", False)
 
-        self.local_outlier_threshold = kwargs.get("local_outlier_threshold", 15)
-        self.local_outlier_winsize = kwargs.get("local_outlier_winsize", 15)
-
-        self.decreasing_llh_winsize = kwargs.get("decreasing_llh_winsize", 0)
-        self.decreasing_llh_lower_z = kwargs.get("decreasing_llh_lower_z", -3)
-
-        self.low_llh_threshold = kwargs.get("low_llh_threshold", 0.05)
-
-        self.median_filter_winsize = kwargs.get("median_filter_winsize", 3)
-        self.boxcar_filter_winsize = kwargs.get("boxcar_filter_winsize", 0)
-
-        self.jump_quantile = kwargs.get("jump_quantile", 0)
-
-        self.interpolation_method = kwargs.get("interpolation_method", "linear")
-        self.interpolation_kwargs = kwargs.get("interpolation_kwargs", {})
-        self.kalman_filter_kwargs = kwargs.get("kalman_filter_kwargs", {})
-
+        self.local_outlier_threshold = kwargs.pop("local_outlier_threshold", 15)
         assert self.local_outlier_threshold > 0
+        self.local_outlier_winsize = kwargs.pop("local_outlier_winsize", 15)
+
+        self.decreasing_llh_winsize = kwargs.pop("decreasing_llh_winsize", 0)
+        self.decreasing_llh_lower_z = kwargs.pop("decreasing_llh_lower_z", -3)
+
+        self.low_llh_threshold = kwargs.pop("low_llh_threshold", 0.05)
         assert self.low_llh_threshold < 1
 
+        self.median_filter_winsize = kwargs.pop("median_filter_winsize", 3)
+        self.boxcar_filter_winsize = kwargs.pop("boxcar_filter_winsize", 0)
+
+        self.jump_quantile = kwargs.pop("jump_quantile", 0)
+
+        self.interpolation_method = kwargs.pop("interpolation_method", "linear")
+        self.interpolation_kwargs = kwargs.pop("interpolation_kwargs", {})
+        self.kalman_filter_kwargs = kwargs.pop("kalman_filter_kwargs", {})
+        assert not kwargs
+
     def init_behavioral_reprs_kwargs(self, **kwargs):
-        self.use_cartesian_blent = kwargs.get("use_cartesian_blent", False)
-        self.norm = kwargs.get("norm", "l1")
+        self.use_cartesian_blent = kwargs.pop("use_cartesian_blent", False)
+        self.norm = kwargs.pop("norm", "l1")
         assert self.norm in ["l1", "l2", "max"]
+        assert not kwargs
 
     def init_dormant_epochs_kwargs(self, fps, use_supervised_learning, **kwargs):
+        self.datums = kwargs.pop("datums", [])
+        self.datums_winsize = kwargs.pop("datums_winsize", fps * 1)
+        self.log_scale = kwargs.pop("log_scale", False)
+
+        self.min_dormant = kwargs.pop("min_dormant", 300 * fps)
+
         if not use_supervised_learning:
-            self.datums = kwargs.get("datums", [])
-            self.datums_winsize = kwargs.get("datums_winsize", fps * 1)
-
-            self.threshold_log = kwargs.get("threshold_log", False)
-            self.num_gmm_comp = kwargs.get("num_gmm_comp", 2)
-            self.threshold_key = kwargs.get("threshold_key", "local_max")
+            self.num_gmm_comp = kwargs.pop("num_gmm_comp", 2)
+            self.threshold_key = kwargs.pop("threshold_key", "local_max")
             # Indices start from 0.
-            self.threshold_idx = kwargs.get("threshold_idx", 1)
+            self.threshold_idx = kwargs.pop("threshold_idx", 1)
 
-            self.min_dormant = kwargs.get("min_dormant", 300 * fps)
-            self.tol_duration = kwargs.get("tol_duration", 90 * fps)
-            self.tol_percent = kwargs.get("tol_percent", 0.4)
-            self.epoch_winsize = kwargs.get("epoch_winsize", 180 * fps)
+            self.epoch_winsize = kwargs.pop("epoch_winsize", 180 * fps)
+            self.tol_duration = kwargs.pop("tol_duration", 90 * fps)
+            self.tol_percent = kwargs.pop("tol_percent", 0.4)
         else:
-            raise NotImplementedError
-
-    def init_active_bouts_kwargs(self, fps, use_supervised_learning, **kwargs):
-        if not use_supervised_learning:
-            self.datums_list = kwargs.get("datums_list", [[]])
-            self.datums_winsize = kwargs.get("datums_winsize", fps // 5)
-
-            self.threshold_log = kwargs.get("threshold_log", True)
-            self.num_gmm_comp = kwargs.get("num_gmm_comp", 3)
-            self.threshold_key = kwargs.get("threshold_key", "local_max")
-            # Indices start from 0.
-            self.threshold_idx = kwargs.get("threshold_idx", 1)
-            self.post_processing_winsize = kwargs.get(
+            self.post_processing_winsize = kwargs.pop(
                 "post_processing_winsize", fps * 2
             )
-            self.post_processing_wintype = kwargs.get(
+            self.post_processing_wintype = kwargs.pop(
                 "post_processing_wintype", "boxcar"
             )
             assert self.post_processing_winsize > 1
+            self.decision_tree_kwargs = self.__class__.decision_tree_default_kwargs(
+                **kwargs
+            )
+        assert not kwargs
+
+    @staticmethod
+    def decision_tree_default_kwargs(**kwargs):
+        decision_tree_kwargs = {}
+        decision_tree_kwargs["n_estimators"] = kwargs.pop("n_estimators", 10)
+        decision_tree_kwargs["max_depth"] = kwargs.pop("max_depth", 5)
+        decision_tree_kwargs["min_samples_leaf"] = kwargs.pop(
+            "min_samples_leaf", 10 ** 3
+        )
+        decision_tree_kwargs["max_features"] = kwargs.pop("max_features", "sqrt")
+        decision_tree_kwargs["criterion"] = kwargs.pop("criterion", "gini")
+        decision_tree_kwargs["class_weight"] = kwargs.pop("class_weight", "balanced")
+        return decision_tree_kwargs
+
+    def init_active_bouts_kwargs(self, fps, use_supervised_learning, **kwargs):
+        self.datums_list = kwargs.pop("datums_list", [[]])
+        self.datums_winsize = kwargs.pop("datums_winsize", fps // 5)
+        self.log_scale = kwargs.pop("log_scale", True)
+
+        self.post_processing_winsize = kwargs.pop("post_processing_winsize", fps * 2)
+        self.post_processing_wintype = kwargs.pop("post_processing_wintype", "boxcar")
+        assert self.post_processing_winsize > 1
+
+        if not use_supervised_learning:
+            self.num_gmm_comp = kwargs.pop("num_gmm_comp", 3)
+            self.threshold_key = kwargs.pop("threshold_key", "local_max")
+            # Indices start from 0.
+            self.threshold_idx = kwargs.pop("threshold_idx", 1)
         else:
-            raise NotImplementedError
+            self.decision_tree_kwargs = self.__class__.decision_tree_default_kwargs(
+                **kwargs
+            )
+        assert not kwargs
 
     def init_behavior_embeddings_kwargs(self, **kwargs):
         self.UMAP_kwargs = {}
-        self.UMAP_kwargs["n_neighbors"] = kwargs.get("embedding_n_negihbors", 90)
-        self.UMAP_kwargs["min_dist"] = kwargs.get("embedding_min_dist", 0.0)
-        self.UMAP_kwargs["spread"] = kwargs.get("embedding_spread", 1.0)
-        self.UMAP_kwargs["n_components"] = kwargs.get("embedding_n_components", 2)
-        self.UMAP_kwargs["metric"] = kwargs.get("embedding_metric", "hellinger")
-        self.UMAP_kwargs["low_memory"] = kwargs.get("embedding_low_memory", True)
+        self.UMAP_kwargs["n_neighbors"] = kwargs.pop("embedding_n_negihbors", 90)
+        self.UMAP_kwargs["min_dist"] = kwargs.pop("embedding_min_dist", 0.0)
+        self.UMAP_kwargs["spread"] = kwargs.pop("embedding_spread", 1.0)
+        self.UMAP_kwargs["n_components"] = kwargs.pop("embedding_n_components", 2)
+        self.UMAP_kwargs["metric"] = kwargs.pop("embedding_metric", "hellinger")
+        self.UMAP_kwargs["low_memory"] = kwargs.pop("embedding_low_memory", True)
+        self.UMAP_kwargs = {**self.UMAP_kwargs, **kwargs}
+        assert not kwargs
 
     def init_behavior_clustering_kwargs(self, **kwargs):
         self.HDBSCAN_kwargs = {}
         self.HDBSCAN_kwargs["prediction_data"] = True
         self.HDBSCAN_kwargs["approx_min_span_tree"] = True
-        self.HDBSCAN_kwargs["cluster_selection_method"] = kwargs.get(
+        self.HDBSCAN_kwargs["cluster_selection_method"] = kwargs.pop(
             "cluster_selection_method", "eom"
         )
-        self.HDBSCAN_kwargs["cluster_selection_epsilon"] = kwargs.get(
+        self.HDBSCAN_kwargs["cluster_selection_epsilon"] = kwargs.pop(
             "cluster_selection_epsilon", 0.0
         )
-        self.HDBSCAN_kwargs["min_cluster_size"] = kwargs.get("min_cluster_size", 500)
-        self.HDBSCAN_kwargs["min_samples"] = kwargs.get("min_cluster_samples", 5)
+        self.HDBSCAN_kwargs["min_cluster_size"] = kwargs.pop("min_cluster_size", 500)
+        self.HDBSCAN_kwargs["min_samples"] = kwargs.pop("min_cluster_samples", 5)
+        self.HDBSCAN_kwargs = {**self.HDBSCAN_kwargs, **kwargs}
+        assert not kwargs
 
     def init_mapping_postprocessing_kwargs(self, **kwargs):
         pass

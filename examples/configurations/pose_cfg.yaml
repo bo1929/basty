@@ -1,0 +1,78 @@
+### Body-parts Declaration ###
+# --->
+# Required.
+singles:
+  - a6
+  - a5
+  - atip
+  - headtip
+  - prob
+  - thor_ant
+  - thor_post
+
+# Drop one of the left-right counterparts based on llh values.
+# If you want to keep both, list under single.
+# Optional.
+counterparts:  # new: [left, right]
+  head: [head_l, head_r]
+  halt: [halt_l, halt_r]
+  t1_tip: [t1_l_tip, t1_r_tip]
+  t2_tip: [t2_l_tip, t2_r_tip]
+  t3_tip: [t3_l_tip, t3_r_tip]
+  joint1: [joint1_l, joint1_r]
+  joint2: [joint2_l, joint2_r]
+  joint3: [joint3_l, joint3_r]
+  joint1_top: [joint1_ltop, joint1_rtop]
+  joint2_top: [joint2_ltop, joint2_rtop]
+  joint3_top: [joint3_ltop, joint3_rtop]
+  joint1_mid: [joint1_lmid, joint1_rmid]
+  joint2_mid: [joint2_lmid, joint2_rmid]
+  joint3_mid: [joint_3lmid, joint_3rmid]
+
+# Group definitions for analog body-parts.
+# Optional.
+groups: 
+  joint:
+  - joint1
+  - joint2
+  - joint3
+  tip:
+  - t1_tip
+  - t2_tip
+  - t3_tip
+  joint_top:
+  - joint1_top
+  - joint2_top
+  - joint3_top
+  joint_mid:
+  - joint1_mid
+  - joint2_mid
+  - joint3_mid
+
+# Optional.
+connected_parts:
+  - [joint1_ltop, joint1_lmid, joint1_l, t1_l_tip]
+  - [joint2_ltop, joint2_lmid, joint2_l, t2_l_tip]
+  - [joint3_ltop, joint_3lmid, joint3_l, t3_l_tip]
+                         
+  - [joint1_rtop, joint1_rmid, joint1_r, t1_r_tip]
+  - [joint2_rtop, joint2_rmid, joint2_r, t2_r_tip]
+  - [joint3_rtop, joint_3rmid, joint3_r, t3_r_tip]
+
+### ~~~ ###
+
+### User-defined Points ### 
+# --->
+# For better pose representations.
+# Optional.
+defined_points: # p = (x1 + x2 + ... xn)/n + (y1 + y2 + ... yn)/n
+  midpoint:
+  - joint2_top
+  - joint3_top
+  - thor_ant
+  - thor_post
+
+# Construct spine through two body-parts.
+# Give only two body-part, a line representing spine will pass through them.
+# Optional for egocentric frames.
+centerline: [thor_ant, thor_post]
