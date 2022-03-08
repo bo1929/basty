@@ -26,13 +26,18 @@ class HumanAnnotations:
         self.multibehavior_to_label[self.arouse_annotation] = 1
         self.behavior_to_label[self.noise_annotation] = 2
         self.multibehavior_to_label[self.noise_annotation] = 2
+        static_annotation_list = [
+            self.inactive_annotation,
+            self.arouse_annotation,
+            self.noise_annotation,
+        ]
 
         if ann_path is not None:
             self.df_ann = pd.read_csv(ann_path)
             behaviors_uniq = [
                 behavior
                 for behavior in self.df_ann["Behavior"].unique()
-                if behavior != self.inactive_annotation
+                if behavior not in static_annotation_list
             ]
             for i, bhv in enumerate(sorted(behaviors_uniq)):
                 self.behavior_to_label[bhv] = i + 3
@@ -63,8 +68,8 @@ class HumanAnnotations:
         annotations = {}
         missing_annotations = {}
         for path in pathlib.Path(ann_dir).glob("*.csv"):
-            bhv = "-".join(path.stem.split("-")[-1].split("_"))
             try:
+                bhv = "-".join(path.stem.split("-")[-1].split("_"))
                 df_tmp = pd.read_csv(path, header=None)
                 df_tmp = df_tmp.rename(columns={0: "Beginning", 1: "End"})
                 df_tmp = df_tmp.assign(
@@ -77,7 +82,6 @@ class HumanAnnotations:
                 )
                 missing_annotations[bhv] = df_tmp
 
-        df_missing_ann = pd.concat(missing_annotations.values()).reset_index(drop=True)
         df_ann = (
             pd.concat(annotations.values())
             .sort_values("Beginning")
@@ -86,23 +90,29 @@ class HumanAnnotations:
         ann_stop_dict = {"Beginning": [], "End": [], "Behavior": []}
         for i in range(df_ann.shape[0]):
             ann_stop_dict["Behavior"].append(self.inactive_annotation)
-            ann_stop_dict["Beginning"].append(df_ann["End"].iloc[i] + 1)
+            ann_stop_dict["Beginning"].append(df_ann["End"].iloc[i])
             if i == df_ann.shape[0] - 1:
                 ann_stop_dict["End"].append(num_of_frames)
             else:
-                ann_stop_dict["End"].append(df_ann["Beginning"].iloc[i + 1] - 1)
+                ann_stop_dict["End"].append(df_ann["Beginning"].iloc[i + 1])
 
         if df_ann["Beginning"].iloc[0] != 0:
             ann_stop_dict["Behavior"].append(self.inactive_annotation)
             ann_stop_dict["Beginning"].append(0)
-            ann_stop_dict["End"].append(df_ann["Beginning"].iloc[0] - 1)
+            ann_stop_dict["End"].append(df_ann["Beginning"].iloc[0])
 
+        if missing_annotations:
+            df_missing_ann = pd.concat(missing_annotations.values()).reset_index(
+                drop=True
+            )
+        else:
+            df_missing_ann = pd.DataFrame()
         df_ann = (
             pd.concat((df_missing_ann, df_ann, pd.DataFrame.from_dict(ann_stop_dict)))
             .sort_values("Beginning")
             .reset_index(drop=True)
         )
-        df_ann.to_csv(ann_out_path, index=False)
+        df_ann.to_csv(ann_out_path)
 
     def get_annotations(self):
         y_ann_list = [[] for _ in range(self.df_ann["End"].max())]

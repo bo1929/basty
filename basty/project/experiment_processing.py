@@ -120,6 +120,7 @@ class Project(ParameterHandler, LoadingHelper, SavingHelper):
             io.safe_create_dir(expt_path / "embeddings")
             io.safe_create_dir(expt_path / "clusterings")
             io.safe_create_dir(expt_path / "mappings")
+            # io.safe_create_dir(expt_path / "figures")
 
             if not (expt_path / "expt_record.z").exists():
                 self.logger.direct_info(

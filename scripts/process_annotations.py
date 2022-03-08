@@ -11,7 +11,7 @@ parser.add_argument(
     type=str,
 )
 parser.add_argument(
-    "--expt-length",
+    "--num-of-frames",
     required=True,
     type=int,
 )
@@ -25,10 +25,11 @@ parser.add_argument(
 args = parser.parse_args()
 
 expt_name = args.expt_name
-total_frame = args.expt_length
+num_of_frames = args.num_of_frames
 annotation_directory = pathlib.Path(args.annotation_directory)
 
 annotations = {}
+missing_annotations = {}
 for path in pathlib.Path(annotation_directory / f"{expt_name}/").glob("*.csv"):
     print(path)
     try:
@@ -40,7 +41,10 @@ for path in pathlib.Path(annotation_directory / f"{expt_name}/").glob("*.csv"):
         )
         annotations[bhv] = df_tmp
     except pd.errors.EmptyDataError:
-        annotations[bhv] = pd.DataFrame()
+        df_tmp = pd.DataFrame.from_dict(
+            {"Beginning": [-1], "End": [-1], "Behavior": [bhv]}
+        )
+        missing_annotations[bhv] = df_tmp
 
 df_ann = pd.concat(annotations.values()).sort_values("Beginning").reset_index(drop=True)
 ann_stop_dict = {"Beginning": [], "End": [], "Behavior": []}
@@ -48,7 +52,7 @@ for i in range(df_ann.shape[0]):
     ann_stop_dict["Behavior"].append(LABEL_INACTIVE)
     ann_stop_dict["Beginning"].append(df_ann["End"].iloc[i])
     if i == df_ann.shape[0] - 1:
-        ann_stop_dict["End"].append(total_frame)
+        ann_stop_dict["End"].append(num_of_frames)
     else:
         ann_stop_dict["End"].append(df_ann["Beginning"].iloc[i + 1])
 
@@ -57,8 +61,12 @@ if df_ann["Beginning"].iloc[0] != 0:
     ann_stop_dict["Beginning"].append(0)
     ann_stop_dict["End"].append(df_ann["Beginning"].iloc[0])
 
+if missing_annotations:
+    df_missing_ann = pd.concat(missing_annotations.values()).reset_index(drop=True)
+else:
+    df_missing_ann = pd.DataFrame()
 df_ann = (
-    pd.concat((df_ann, pd.DataFrame.from_dict(ann_stop_dict)))
+    pd.concat((df_missing_ann, df_ann, pd.DataFrame.from_dict(ann_stop_dict)))
     .sort_values("Beginning")
     .reset_index(drop=True)
 )

@@ -16,8 +16,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--reset-project",
-    default=True,
-    type=bool,
+    action=argparse.BooleanOptionalAction,
     help="Option to create a new project.",
 )
 
@@ -37,35 +36,12 @@ def backup_old_project(main_cfg_path):
         old_proj_dir.replace(old_proj_dir.with_suffix(suffix))
 
 
-def test_project_init(main_cfg_path, **kwargs):
-    assert proj is not None
-
-    assert Path(proj.main_cfg["configuration_paths"]["pose_cfg"]).exists()
-    assert Path(proj.main_cfg["configuration_paths"]["feature_cfg"]).exists()
-    assert Path(proj.main_cfg["configuration_paths"]["temporal_cfg"]).exists()
-    assert Path(proj.project_path / "main_cfg.yaml").exists()
-
-    for expt_name, expt_path in proj.expt_path_dict.items():
-        assert (expt_path / "expt_record.z").exists()
-        assert (expt_path / "embeddings").exists()
-        expt_record = proj._load_joblib_object(expt_path, "expt_record.z")
-        if expt_record.has_annotation:
-            assert expt_name in list(proj.annotation_path_dict.keys())
-            assert (expt_path / "annotations.npy").exists()
-            assert expt_record.mask_annotated is not None
-
-
 if __name__ == "__main__":
     """
     Add suffix '.old' to the project created by previous tests.
     """
     if reset_project:
         backup_old_project(main_cfg_path)
-    """
-    Only test if the intended files and directories created.
-    Uses default arguments.
-    Test starts.
-    """
 
     proj = Project(
         main_cfg_path,
