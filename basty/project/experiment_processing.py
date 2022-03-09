@@ -365,13 +365,14 @@ class ExptActiveBouts(Project):
                 behavior_to_label = expt_record.behavior_to_label
                 lbl1 = behavior_to_label[expt_record.inactive_annotation]
                 lbl2 = behavior_to_label[expt_record.noise_annotation]
+                mask_dormant = expt_record.mask_dormant
 
                 y_train = np.zeros(y_ann.shape, dtype=int)
                 y_train[y_ann != lbl1] = 1
                 y_train[y_ann == lbl2] = 2
 
-                X_train_list.append(X_expt_dict[ann_expt_name])
-                y_train_list.append(y_train)
+                X_train_list.append(X_expt_dict[ann_expt_name][mask_dormant])
+                y_train_list.append(y_train[mask_dormant])
 
             self.logger.direct_info("Training the decision tree for active bouts.")
             active_bouts = ActiveBouts()

@@ -128,7 +128,6 @@ class ParameterHandler:
         self.UMAP_kwargs["n_components"] = kwargs.pop("embedding_n_components", 2)
         self.UMAP_kwargs["metric"] = kwargs.pop("embedding_metric", "hellinger")
         self.UMAP_kwargs["low_memory"] = kwargs.pop("embedding_low_memory", True)
-        self.UMAP_kwargs = {**self.UMAP_kwargs, **kwargs}
 
     def init_behavior_clustering_kwargs(self, **kwargs):
         self.HDBSCAN_kwargs = {}
@@ -142,7 +141,6 @@ class ParameterHandler:
         )
         self.HDBSCAN_kwargs["min_cluster_size"] = kwargs.pop("min_cluster_size", 500)
         self.HDBSCAN_kwargs["min_samples"] = kwargs.pop("min_cluster_samples", 5)
-        self.HDBSCAN_kwargs = {**self.HDBSCAN_kwargs, **kwargs}
 
     def init_mapping_postprocessing_kwargs(self, **kwargs):
         pass

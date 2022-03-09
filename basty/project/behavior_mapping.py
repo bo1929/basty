@@ -3,7 +3,7 @@ import numpy as np
 
 from tqdm import tqdm
 from collections import defaultdict
-from hdbscan import HDBSCAN, membership_vector
+from hdbscan import HDBSCAN, membership_vector, all_points_membership_vectors
 
 import basty.utils.misc as misc
 
@@ -98,10 +98,11 @@ class BehaviorEmbedding(BehaviorMixin):
 
             assert expt_record.has_annotation
             mask_annotated = expt_record.mask_annotated
+            mask_dormant = expt_record.mask_dormant
             y_expt = self._load_numpy_array(expt_path, "annotations.npy")
 
-            X_expt_dict[expt_name] = X_expt[mask_annotated]
-            y_expt_dict[expt_name] = y_expt[mask_annotated]
+            X_expt_dict[expt_name] = X_expt[mask_dormant & mask_annotated]
+            y_expt_dict[expt_name] = y_expt[mask_dormant & mask_annotated]
 
             expt_indices_dict[expt_name] = (
                 prev,
@@ -299,7 +300,20 @@ class BehaviorClustering(BehaviorMixin):
             self._save_numpy_array(
                 cluster_labels_expt,
                 expt_path / "clusterings",
-                f"joint_cluster_labels_{embedding_name}.npy",
+                f"labels_joint_cluster_{embedding_name}.npy",
+                depth=3,
+            )
+            cluster_membership = all_points_membership_vectors(clusterer)
+            cluster_membership = np.hstack(
+                (
+                    1 - np.sum(cluster_membership[:, 1:], axis=1, keepdims=True),
+                    cluster_membership,
+                )
+            )
+            self._save_numpy_array(
+                cluster_membership,
+                expt_path / "clusterings",
+                f"membership_joint_cluster_{embedding_name}.npy",
                 depth=3,
             )
 
@@ -347,7 +361,20 @@ class BehaviorClustering(BehaviorMixin):
             self._save_numpy_array(
                 cluster_labels,
                 expt_path / "clusterings",
-                f"disparate_cluster_labels_{embedding_name}.npy",
+                f"labels_disparate_cluster_{embedding_name}.npy",
+                depth=3,
+            )
+            cluster_membership = all_points_membership_vectors(clusterer)
+            cluster_membership = np.hstack(
+                (
+                    1 - np.sum(cluster_membership[:, 1:], axis=1, keepdims=True),
+                    cluster_membership,
+                )
+            )
+            self._save_numpy_array(
+                cluster_membership,
+                expt_path / "clusterings",
+                f"membership_disparate_cluster_{embedding_name}.npy",
                 depth=3,
             )
 
@@ -420,13 +447,13 @@ class BehaviorClustering(BehaviorMixin):
         self._save_numpy_array(
             cluster_membership,
             expt_path2 / "clusterings",
-            f"cross_pair_cluster_membership_{embedding_name2}_{embedding_name1}.npy",
+            f"membership_cross_pair_cluster_{embedding_name2}_{embedding_name1}.npy",
             depth=3,
         )
         self._save_numpy_array(
             cluster_labels,
             expt_path1 / "clusterings",
-            f"cross_pair_cluster_labels_{embedding_name1}_{embedding_name2}.npy",
+            f"labels_cross_pair_cluster_{embedding_name1}_{embedding_name2}.npy",
             depth=3,
         )
 
@@ -483,10 +510,10 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
         if any([name in clustering_name for name in unsupervised_embedding_names]):
             y_ann = y_ann[expt_record.mask_dormant & expt_record.mask_active]
         else:
-            y_ann = y_ann[expt_record.mask_annotated]
+            y_ann = y_ann[expt_record.mask_dormant & expt_record.mask_annotated]
 
         y_cluster = self._load_numpy_array(
-            expt_path / "clusterings", f"{clustering_name}.npy"
+            expt_path / "clusterings", f"labels_{clustering_name}.npy"
         )
 
         mapping_dictionary = defaultdict(dict)
@@ -532,7 +559,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
         )
         for ann_expt_name, unann_expt_name in pbar:
             embedding_name = f"semisupervised_pair_embedding_{unann_expt_name}"
-            clustering_name = f"disparate_cluster_labels_{embedding_name}"
+            clustering_name = f"disparate_cluster_{embedding_name}"
             pbar.set_description(
                 f"Mapping cluster labels of {clustering_name} to behavior labels"
             )
@@ -544,7 +571,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
         pbar = tqdm(annotated_expt_names)
         for ann_expt_name in pbar:
             embedding_name = "supervised_embedding"
-            clustering_name = f"disparate_cluster_labels_{embedding_name}"
+            clustering_name = f"disparate_cluster_{embedding_name}"
             pbar.set_description(
                 f"Mapping cluster labels of {clustering_name} to behavior labels"
             )
@@ -556,7 +583,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
         pbar = tqdm(annotated_expt_names)
         for ann_expt_name in pbar:
             embedding_name = "supervised_joint_embedding"
-            clustering_name = f"disparate_cluster_labels_{embedding_name}"
+            clustering_name = f"disparate_cluster_{embedding_name}"
             pbar.set_description(
                 f"Mapping cluster labels of {clustering_name} to behavior labels"
             )
@@ -568,7 +595,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
         pbar = tqdm(annotated_expt_names)
         for ann_expt_name in pbar:
             embedding_name = "unsupervised_embedding"
-            clustering_name = f"disparate_cluster_labels_{embedding_name}"
+            clustering_name = f"disparate_cluster_{embedding_name}"
             pbar.set_description(
                 f"Mapping cluster labels of {clustering_name} to behavior labels"
             )
@@ -580,7 +607,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
         pbar = tqdm(annotated_expt_names)
         for ann_expt_name in pbar:
             embedding_name = "unsupervised_joint_embedding"
-            clustering_name = f"disparate_cluster_labels_{embedding_name}"
+            clustering_name = f"disparate_cluster_{embedding_name}"
             pbar.set_description(
                 f"Mapping cluster labels of {clustering_name} to behavior labels"
             )
@@ -596,7 +623,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
         )
         for ann_expt_name, unann_expt_name in pbar:
             embedding_name = f"semisupervised_pair_embedding_{unann_expt_name}"
-            clustering_name = f"joint_cluster_labels_{embedding_name}"
+            clustering_name = f"joint_cluster_{embedding_name}"
             pbar.set_description(
                 f"Mapping cluster labels of {clustering_name} to behavior labels"
             )
@@ -608,7 +635,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
         pbar = tqdm(annotated_expt_names)
         for ann_expt_name in pbar:
             embedding_name = "supervised_joint_embedding"
-            clustering_name = f"joint_cluster_labels_{embedding_name}"
+            clustering_name = f"joint_cluster_{embedding_name}"
             pbar.set_description(
                 f"Mapping cluster labels of {clustering_name} to behavior labels"
             )
@@ -620,7 +647,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
         pbar = tqdm(annotated_expt_names)
         for ann_expt_name in pbar:
             embedding_name = "unsupervised_joint_embedding"
-            clustering_name = f"joint_cluster_labels_{embedding_name}"
+            clustering_name = f"joint_cluster_{embedding_name}"
             pbar.set_description(
                 f"Mapping cluster labels of {clustering_name} to behavior labels"
             )
@@ -637,13 +664,44 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
         for ann_expt_name, unann_expt_name in pbar:
             embedding_name1 = f"semisupervised_pair_embedding_{unann_expt_name}"
             embedding_name2 = f"semisupervised_pair_embedding_{ann_expt_name}"
-            clustering_name = (
-                f"cross_pair_cluster_labels_{embedding_name1}_{embedding_name2}"
-            )
+            clustering_name = f"cross_pair_cluster_{embedding_name1}_{embedding_name2}"
             pbar.set_description(
                 f"Mapping cluster labels of {clustering_name} to behavior labels"
             )
             self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
+
+    @misc.timeit
+    def compute_behavior_membership(self, expt_name, clustering_name):
+        expt_path = self.expt_path_dict[expt_name]
+
+        expt_record = self._load_joblib_object(expt_path, "expt_record.z")
+
+        assert expt_record.has_annotation
+
+        cluster_membership = self._load_numpy_array(
+            expt_path / "clusterings",
+            f"membership_{clustering_name}.npy",
+        )
+        mapping = self._load_yaml_dictionary(
+            expt_path / "mappings",
+            f"mapping_{clustering_name}.yaml",
+        )
+
+        behavior_membership = np.zeros(
+            (cluster_membership.shape[0], len(expt_record.label_to_behavior))
+        )
+        for cluster_lbl, behavior_weights in mapping.items():
+            for behavior_lbl, weight in behavior_weights.items():
+                behavior_membership[:, behavior_lbl] = (
+                    behavior_membership[:, behavior_lbl]
+                    + cluster_membership[:, cluster_lbl] * weight
+                )
+        self._save_numpy_array(
+            behavior_membership,
+            expt_path / "mappings",
+            f"membership_{clustering_name.replace('cluster', 'behavior')}.npy",
+            depth=3,
+        )
 
     @misc.timeit
     def compute_cross_pair_behavior_membership(
@@ -661,7 +719,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
 
         cluster_membership = self._load_numpy_array(
             expt_path2 / "clusterings",
-            f"cross_pair_cluster_membership_{embedding_name2}_{embedding_name1}.npy",
+            f"membership_cross_pair_cluster_{embedding_name2}_{embedding_name1}.npy",
         )
         # cluster_labels = self._load_numpy_array(
         #     expt_path1 / "clusterings",
@@ -669,7 +727,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
         # )
         mapping = self._load_yaml_dictionary(
             expt_path1 / "mappings",
-            f"mapping_cross_pair_cluster_labels_{embedding_name1}_{embedding_name2}.yaml",
+            f"mapping_cross_pair_cluster_{embedding_name1}_{embedding_name2}.yaml",
         )
 
         behavior_membership = np.zeros(
@@ -684,7 +742,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
         self._save_numpy_array(
             behavior_membership,
             expt_path2 / "mappings",
-            f"cross_pair_behavior_membership_{embedding_name2}_{embedding_name1}.npy",
+            f"membership_cross_pair_behavior_{embedding_name2}_{embedding_name1}.npy",
             depth=3,
         )
 
@@ -724,7 +782,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
             unann_embedding_name = f"semisupervised_pair_embedding_{ann_expt_name}"
             behavior_membership = self._load_numpy_array(
                 unann_expt_path / "mappings",
-                f"cross_pair_behavior_membership_{unann_embedding_name}_{ann_embedding_name}.npy",
+                f"membership_cross_pair_behavior_{unann_embedding_name}_{ann_embedding_name}.npy",
             )
             behavior_membership_dict[unann_expt_name].append(behavior_membership)
 
@@ -738,6 +796,6 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
             self._save_numpy_array(
                 mean_behavior_membership,
                 unann_expt_path / "mappings",
-                "cross_pair_mean_behavior_membership_semisupervised_pair_embedding.npy",
+                "avg_membership_cross_pair_behavior_semisupervised_pair_embedding.npy",
                 depth=3,
             )
