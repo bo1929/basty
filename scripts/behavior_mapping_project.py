@@ -1,8 +1,5 @@
 import argparse
 
-from pathlib import Path
-
-from basty.utils.io import read_config
 from basty.project.behavior_mapping import BehaviorMapping
 
 parser = argparse.ArgumentParser(
@@ -14,17 +11,14 @@ parser.add_argument(
     required=True,
     help="Path to the main configuration file.",
 )
+
+# Embedding arguments.
 parser.add_argument(
-    "--reset-project",
-    action=argparse.BooleanOptionalAction,
-    help="Option to create a new project.",
-)
-parser.add_argument(
-    "--compute-supervised-embeddings",
+    "--compute-supervised-disparate-embeddings",
     action=argparse.BooleanOptionalAction,
 )
 parser.add_argument(
-    "--compute-unsupervised-embeddings",
+    "--compute-unsupervised-disparate-embeddings",
     action=argparse.BooleanOptionalAction,
 )
 parser.add_argument(
@@ -40,6 +34,7 @@ parser.add_argument(
     action=argparse.BooleanOptionalAction,
 )
 
+# Clustering arguments.
 parser.add_argument(
     "--jointly-cluster-supervised-joint",
     action=argparse.BooleanOptionalAction,
@@ -62,11 +57,11 @@ parser.add_argument(
     action=argparse.BooleanOptionalAction,
 )
 parser.add_argument(
-    "--disparately-cluster-supervised",
+    "--disparately-cluster-supervised-disparate",
     action=argparse.BooleanOptionalAction,
 )
 parser.add_argument(
-    "--disparately-cluster-unsupervised",
+    "--disparately-cluster-unsupervised-disparate",
     action=argparse.BooleanOptionalAction,
 )
 parser.add_argument(
@@ -75,79 +70,58 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--compute-cross-pair-cluster-membership-semisupervised-pair",
+    "--crosswisely-cluster-semisupervised-pair",
+    action=argparse.BooleanOptionalAction,
+)
+
+# Correspondence arguments.
+parser.add_argument(
+    "--map-disparate-cluster-supervised-disparate",
+    action=argparse.BooleanOptionalAction,
+)
+parser.add_argument(
+    "--map-disparate-cluster-supervised-joint",
+    action=argparse.BooleanOptionalAction,
+)
+parser.add_argument(
+    "--map-disparate-cluster-unsupervised-disparate",
+    action=argparse.BooleanOptionalAction,
+)
+parser.add_argument(
+    "--map-disparate-cluster-unsupervised-joint",
+    action=argparse.BooleanOptionalAction,
+)
+parser.add_argument(
+    "--map-disparate-cluster-semisupervised-pair",
     action=argparse.BooleanOptionalAction,
 )
 
 parser.add_argument(
-    "--map-disparate-cluster-labels-supervised",
+    "--map-joint-cluster-supervised-joint",
     action=argparse.BooleanOptionalAction,
 )
 parser.add_argument(
-    "--map-disparate-cluster-labels-supervised-joint",
+    "--map-joint-cluster-unsupervised-joint",
     action=argparse.BooleanOptionalAction,
 )
 parser.add_argument(
-    "--map-disparate-cluster-labels-unsupervised",
-    action=argparse.BooleanOptionalAction,
-)
-parser.add_argument(
-    "--map-disparate-cluster-labels-unsupervised-joint",
+    "--map-joint-cluster-semisupervised-pair",
     action=argparse.BooleanOptionalAction,
 )
 
 parser.add_argument(
-    "--map-joint-cluster-labels-supervised-joint",
+    "--map-crosswise-cluster-semisupervised-pair",
     action=argparse.BooleanOptionalAction,
 )
 parser.add_argument(
-    "--map-joint-cluster-labels-unsupervised-joint",
-    action=argparse.BooleanOptionalAction,
-)
-
-parser.add_argument(
-    "--map-disparate-cluster-labels-semisupervised-pair",
-    action=argparse.BooleanOptionalAction,
-)
-parser.add_argument(
-    "--map-joint-cluster-labels-semisupervised-pair",
-    action=argparse.BooleanOptionalAction,
-)
-parser.add_argument(
-    "--map-cross-pair-cluster-labels-semisupervised-pair",
-    action=argparse.BooleanOptionalAction,
-)
-
-parser.add_argument(
-    "--compute-cross-pair-behavior-membership-semisupervised-pair",
-    action=argparse.BooleanOptionalAction,
-)
-parser.add_argument(
-    "--compute-cross-pair-mean-behavior-membership-semisupervised-pair",
+    "--crosswisely-compute-behavior-score-crosswise-cluster-semisupervised-pair",
     action=argparse.BooleanOptionalAction,
 )
 
 args = parser.parse_args()
 
 
-def backup_old_project(main_cfg_path):
-    main_cfg = read_config(main_cfg_path)
-    project_path = main_cfg.get("project_path")
-    old_proj_dir = Path(project_path)
-    if old_proj_dir.exists():
-        suffix = ".old"
-        while old_proj_dir.with_suffix(suffix).exists():
-            suffix = suffix + ".old"
-        old_proj_dir.replace(old_proj_dir.with_suffix(suffix))
-
-
 if __name__ == "__main__":
-    """
-    Add suffix '.old' to the project created by previous tests.
-    """
-    if args.reset_project:
-        backup_old_project(args.main_cfg_path)
-
     UMAP_kwargs = {}
     UMAP_kwargs["n_neighbors"] = 90
     UMAP_kwargs["min_dist"] = 0.0
@@ -164,26 +138,32 @@ if __name__ == "__main__":
     HDBSCAN_kwargs["min_cluster_size"] = 500
     HDBSCAN_kwargs["min_samples"] = 5
 
-    mapping_post_processing_kwargs = {}
+    mapping_postprocessing_kwargs = {}
+    behavior_correspondence_kwargs = {}
 
     behavior_mapping = BehaviorMapping(
         args.main_cfg_path,
         **UMAP_kwargs,
         **HDBSCAN_kwargs,
-        **mapping_post_processing_kwargs
+        **behavior_correspondence_kwargs,
+        **mapping_postprocessing_kwargs
     )
 
-    if args.compute_supervised_embeddings:
-        behavior_mapping.compute_supervised_embeddings()
-    if args.compute_unsupervised_embeddings:
-        behavior_mapping.compute_unsupervised_embeddings()
-    if args.compute_unsupervised_joint_embeddings:
-        behavior_mapping.compute_unsupervised_joint_embeddings()
+    # Embedding related procedures.
+    if args.compute_supervised_disparate_embeddings:
+        behavior_mapping.compute_supervised_disparate_embeddings()
     if args.compute_supervised_joint_embeddings:
         behavior_mapping.compute_supervised_joint_embeddings()
+
+    if args.compute_unsupervised_disparate_embeddings:
+        behavior_mapping.compute_unsupervised_disparate_embeddings()
+    if args.compute_unsupervised_joint_embeddings:
+        behavior_mapping.compute_unsupervised_joint_embeddings()
+
     if args.compute_semisupervised_pair_embeddings:
         behavior_mapping.compute_semisupervised_pair_embeddings()
 
+    # Clustering related procedures.
     if args.jointly_cluster_supervised_joint:
         behavior_mapping.jointly_cluster_supervised_joint()
     if args.jointly_cluster_unsupervised_joint:
@@ -195,38 +175,36 @@ if __name__ == "__main__":
         behavior_mapping.disparately_cluster_supervised_joint()
     if args.disparately_cluster_unsupervised_joint:
         behavior_mapping.disparately_cluster_unsupervised_joint()
-    if args.disparately_cluster_supervised:
-        behavior_mapping.disparately_cluster_supervised()
-    if args.disparately_cluster_unsupervised:
-        behavior_mapping.disparately_cluster_unsupervised()
+    if args.disparately_cluster_supervised_disparate:
+        behavior_mapping.disparately_cluster_supervised_disparate()
+    if args.disparately_cluster_unsupervised_disparate:
+        behavior_mapping.disparately_cluster_unsupervised_disparate()
     if args.disparately_cluster_semisupervised_pair:
         behavior_mapping.disparately_cluster_semisupervised_pair()
 
-    if args.compute_cross_pair_cluster_membership_semisupervised_pair:
-        behavior_mapping.compute_cross_pair_cluster_membership_semisupervised_pair()
+    if args.crosswisely_cluster_semisupervised_pair:
+        behavior_mapping.crosswisely_cluster_semisupervised_pair()
 
-    if args.map_disparate_cluster_labels_supervised:
-        behavior_mapping.map_disparate_cluster_labels_supervised()
-    if args.map_disparate_cluster_labels_supervised_joint:
-        behavior_mapping.map_disparate_cluster_labels_supervised_joint()
-    if args.map_disparate_cluster_labels_unsupervised:
-        behavior_mapping.map_disparate_cluster_labels_unsupervised()
-    if args.map_disparate_cluster_labels_unsupervised_joint:
-        behavior_mapping.map_disparate_cluster_labels_unsupervised_joint()
+    # Correspondence related procedures.
+    if args.map_disparate_cluster_supervised_disparate:
+        behavior_mapping.map_disparate_cluster_supervised_disparate()
+    if args.map_disparate_cluster_supervised_joint:
+        behavior_mapping.map_disparate_cluster_supervised_joint()
+    if args.map_disparate_cluster_unsupervised_disparate:
+        behavior_mapping.map_disparate_cluster_unsupervised_disparate()
+    if args.map_disparate_cluster_unsupervised_joint:
+        behavior_mapping.map_disparate_cluster_unsupervised_joint()
+    if args.map_disparate_cluster_semisupervised_pair:
+        behavior_mapping.map_disparate_cluster_semisupervised_pair()
 
-    if args.map_joint_cluster_labels_supervised_joint:
-        behavior_mapping.map_joint_cluster_labels_supervised_joint()
-    if args.map_joint_cluster_labels_unsupervised_joint:
-        behavior_mapping.map_joint_cluster_labels_unsupervised_joint()
+    if args.map_joint_cluster_supervised_joint:
+        behavior_mapping.map_joint_cluster_supervised_joint()
+    if args.map_joint_cluster_unsupervised_joint:
+        behavior_mapping.map_joint_cluster_unsupervised_joint()
+    if args.map_joint_cluster_semisupervised_pair:
+        behavior_mapping.map_joint_cluster_semisupervised_pair()
 
-    if args.map_disparate_cluster_labels_semisupervised_pair:
-        behavior_mapping.map_disparate_cluster_labels_semisupervised_pair()
-    if args.map_joint_cluster_labels_semisupervised_pair:
-        behavior_mapping.map_joint_cluster_labels_semisupervised_pair()
-    if args.map_cross_pair_cluster_labels_semisupervised_pair:
-        behavior_mapping.map_cross_pair_cluster_labels_semisupervised_pair()
-
-    if args.compute_cross_pair_behavior_membership_semisupervised_pair:
-        behavior_mapping.compute_cross_pair_behavior_membership_semisupervised_pair()
-    if args.compute_cross_pair_mean_behavior_membership_semisupervised_pair:
-        behavior_mapping.compute_cross_pair_mean_behavior_membership_semisupervised_pair()
+    if args.map_crosswise_cluster_semisupervised_pair:
+        behavior_mapping.map_crosswise_cluster_semisupervised_pair()
+    if args.crosswisely_compute_behavior_score_crosswise_cluster_semisupervised_pair:
+        behavior_mapping.crosswisely_compute_behavior_score_crosswise_cluster_semisupervised_pair()

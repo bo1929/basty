@@ -27,15 +27,18 @@ class OutlineMixin:
 
     @staticmethod
     def postprocess_outlines(labels, winsize, wintype="boxcar"):
-        win_positive_counts = BehavioralWindows.get_behavior_counts(
-            labels,
-            wintype=wintype,
-            winsize=winsize,
-            stepsize=1,
-        )
-        labels_postprocessed = np.array(
-            [np.argmax(counts) for counts in (win_positive_counts)]
-        )
+        if winsize > 1:
+            win_positive_counts = BehavioralWindows.get_behavior_counts(
+                labels,
+                wintype=wintype,
+                winsize=winsize,
+                stepsize=1,
+            )
+            labels_postprocessed = np.array(
+                [np.argmax(counts) for counts in (win_positive_counts)]
+            )
+        else:
+            labels_postprocessed = labels
         return labels_postprocessed
 
     @staticmethod
@@ -122,7 +125,7 @@ class OutlineThresholdGMM(OutlineMixin):
         else:
             raise ValueError(
                 f"Given threshold key {threshold_key} is not defined. "
-                "Use (local_min) local minimum or (loca_max) local maximum."
+                "Use (local_min) local minimum or (loca_max) local max."
             )
         return threshold
 
@@ -145,21 +148,21 @@ class SummaryCoefsCWT:
         return np.max(cwt_coefs[:, :, :], axis=1)
 
     @classmethod
-    def get_df_summary_coefs(cls, cwt_coefs, colum_names, log=True, method="sum"):
+    def get_df_coefs_summary(cls, cwt_coefs, colum_names, log=True, method="sum"):
         assert len(colum_names) == cwt_coefs.shape[-1]
-        known_methods = ["sum", "maximum"]
+        known_methods = ["sum", "max"]
 
         if log and method == "sum":
             df = pd.DataFrame(
                 cls.coef_logsum_scales(cwt_coefs),
                 columns=colum_names.keys(),
             )
-        elif log and method == "maximum":
+        elif log and method == "max":
             df = pd.DataFrame(
                 cls.coef_logmax_scales(cwt_coefs),
                 columns=colum_names.keys(),
             )
-        elif not log and method == "maximum":
+        elif not log and method == "max":
             df = pd.DataFrame(
                 cls.coef_max_scales(cwt_coefs),
                 columns=colum_names.keys(),

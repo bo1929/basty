@@ -119,8 +119,8 @@ class Project(ParameterHandler, LoadingHelper, SavingHelper):
             io.safe_create_dir(expt_path)
             io.safe_create_dir(expt_path / "embeddings")
             io.safe_create_dir(expt_path / "clusterings")
-            io.safe_create_dir(expt_path / "mappings")
-            # io.safe_create_dir(expt_path / "figures")
+            io.safe_create_dir(expt_path / "correspondences")
+            io.safe_create_dir(expt_path / "figures")
 
             if not (expt_path / "expt_record.z").exists():
                 self.logger.direct_info(
@@ -198,6 +198,7 @@ class ExptDormantEpochs(Project):
 
     @misc.timeit
     def outline_dormant_epochs(self):
+        dormant_epochs = DormantEpochs()
         X_expt_dict = dict()
         if not self.use_supervised_learning:
             threshold_expt_dict = dict()
@@ -245,15 +246,15 @@ class ExptDormantEpochs(Project):
                 lbl1 = expt_record.behavior_to_label[expt_record.arouse_annotation]
                 lbl2 = expt_record.behavior_to_label[expt_record.noise_annotation]
 
+                X_train = X_expt_dict[ann_expt_name]
                 y_train = np.zeros(y_ann.shape, dtype=int)
                 y_train[y_ann == lbl1] = 1
                 y_train[y_ann == lbl2] = 2
 
-                X_train_list.append(X_expt_dict[ann_expt_name])
+                X_train_list.append(X_train)
                 y_train_list.append(y_train)
 
             self.logger.direct_info("Training the decision tree for dormant epochs.")
-            dormant_epochs = DormantEpochs()
             dormant_epochs.construct_dormant_epochs_decision_tree(
                 X_train_list, y_train_list, **self.decision_tree_kwargs
             )
@@ -302,6 +303,7 @@ class ExptActiveBouts(Project):
 
     @misc.timeit
     def outline_active_bouts(self):
+        active_bouts = ActiveBouts()
         X_expt_dict = dict()
         if not self.use_supervised_learning:
             thresholds_expt_dict = defaultdict(list)
@@ -318,10 +320,11 @@ class ExptActiveBouts(Project):
                 expt_path, "ftname_to_snapft.yaml"
             )
 
-            mask_dormant = expt_record.mask_dormant
-
-            df_coefs = ActiveBouts.get_df_summary_coefs(
-                wsft, ftname_to_snapft, log=self.log_scale, method="sum"
+            df_coefs = ActiveBouts.get_df_coefs_summary(
+                wsft,
+                ftname_to_snapft,
+                log=self.log_scale,
+                method=self.coefs_summary_method,
             )
             del wsft
 
@@ -347,7 +350,7 @@ class ExptActiveBouts(Project):
                 for idx, datums in enumerate(datums_list):
                     thresholds_expt_dict[name].append(
                         ActiveBouts.get_threshold(
-                            X[mask_dormant, idx, np.newaxis],
+                            X[expt_record.mask_dormant, idx, np.newaxis],
                             self.threshold_key,
                             self.num_gmm_comp,
                             self.threshold_idx,
@@ -365,17 +368,16 @@ class ExptActiveBouts(Project):
                 behavior_to_label = expt_record.behavior_to_label
                 lbl1 = behavior_to_label[expt_record.inactive_annotation]
                 lbl2 = behavior_to_label[expt_record.noise_annotation]
-                mask_dormant = expt_record.mask_dormant
 
+                X_train = X_expt_dict[ann_expt_name]
                 y_train = np.zeros(y_ann.shape, dtype=int)
                 y_train[y_ann != lbl1] = 1
                 y_train[y_ann == lbl2] = 2
 
-                X_train_list.append(X_expt_dict[ann_expt_name][mask_dormant])
-                y_train_list.append(y_train[mask_dormant])
+                X_train_list.append(X_train[expt_record.mask_dormant])
+                y_train_list.append(y_train[expt_record.mask_dormant])
 
             self.logger.direct_info("Training the decision tree for active bouts.")
-            active_bouts = ActiveBouts()
             active_bouts.construct_active_bouts_decision_tree(
                 X_train_list, y_train_list, **self.decision_tree_kwargs
             )
@@ -404,10 +406,12 @@ class ExptActiveBouts(Project):
 
             expt_record.mask_active = mask_active
             assert mask_active.any()
+
             dormant_and_active = np.logical_and(
                 expt_record.mask_active, expt_record.mask_dormant
             )
             assert dormant_and_active.any()
+
             dormant_and_active_percent = np.round(
                 np.count_nonzero(dormant_and_active)
                 * 100
@@ -415,7 +419,7 @@ class ExptActiveBouts(Project):
                 1,
             )
             self.logger.direct_info(
-                f"Dormant and active frames are {dormant_and_active_percent}%."
+                f"dormant and active frames are {dormant_and_active_percent}%."
             )
 
             mean_bout = np.round(

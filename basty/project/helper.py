@@ -105,6 +105,7 @@ class ParameterHandler:
         self.datums_list = kwargs.pop("datums_list", [[]])
         self.datums_winsize = kwargs.pop("datums_winsize", fps // 5)
         self.log_scale = kwargs.pop("log_scale", True)
+        self.coefs_summary_method = kwargs.pop("coefs_summary_method", "sum")
 
         self.post_processing_winsize = kwargs.pop("post_processing_winsize", fps * 2)
         self.post_processing_wintype = kwargs.pop("post_processing_wintype", "boxcar")
@@ -142,7 +143,10 @@ class ParameterHandler:
         self.HDBSCAN_kwargs["min_cluster_size"] = kwargs.pop("min_cluster_size", 500)
         self.HDBSCAN_kwargs["min_samples"] = kwargs.pop("min_cluster_samples", 5)
 
-    def init_mapping_postprocessing_kwargs(self, **kwargs):
+    def init_behavior_mapping_postprocessing_kwargs(self, **kwargs):
+        pass
+
+    def init_behavior_correspondence_kwargs(self, **kwargs):
         pass
 
 

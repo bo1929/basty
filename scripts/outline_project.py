@@ -1,23 +1,15 @@
 import argparse
 
-from pathlib import Path
-
-from basty.utils.io import read_config
 from basty.project.experiment_processing import ExptDormantEpochs, ExptActiveBouts
 
 parser = argparse.ArgumentParser(
-    description="Initialize project  based on a given main configuration."
+    description="Outlining project to compute dormant epochs and active bouts."
 )
 parser.add_argument(
     "--main-cfg-path",
     type=str,
     required=True,
     help="Path to the main configuration file.",
-)
-parser.add_argument(
-    "--reset-project",
-    action=argparse.BooleanOptionalAction,
-    help="Option to create a new project.",
 )
 parser.add_argument(
     "--outline-dormant-epochs",
@@ -35,24 +27,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-def backup_old_project(main_cfg_path):
-    main_cfg = read_config(main_cfg_path)
-    project_path = main_cfg.get("project_path")
-    old_proj_dir = Path(project_path)
-    if old_proj_dir.exists():
-        suffix = ".old"
-        while old_proj_dir.with_suffix(suffix).exists():
-            suffix = suffix + ".old"
-        old_proj_dir.replace(old_proj_dir.with_suffix(suffix))
-
-
 if __name__ == "__main__":
-    """
-    Add suffix '.old' to the project created by previous tests.
-    """
-    if args.reset_project:
-        backup_old_project(args.main_cfg_path)
-
     FPS = 30
 
     supervised_dormant_epochs = False
@@ -68,12 +43,13 @@ if __name__ == "__main__":
         "tol_duration": 90 * FPS,
         "tol_percent": 0.4,
     }
+    dormant_epochs_decision_tree_kwargs = {}
 
     if args.outline_dormant_epochs or args.outline_all:
         dormant_epochs = ExptDormantEpochs(
             args.main_cfg_path,
             use_supervised_learning=supervised_dormant_epochs,
-            **dormant_epochs_kwargs
+            **{**dormant_epochs_kwargs, **dormant_epochs_decision_tree_kwargs}
         )
         dormant_epochs.outline_dormant_epochs()
 
@@ -82,10 +58,11 @@ if __name__ == "__main__":
         "datums_list": [[]],
         "datums_winsize": FPS // 5,
         "log_scale": True,
+        "coefs_summary_method": "max",
         "post_processing_winsize": FPS * 2,
         "post_processing_wintype": "boxcar",
     }
-    decision_tree_kwargs = {
+    active_bouts_decision_tree_kwargs = {
         "n_estimators": 10,
         "n_estimators": 10,
         "max_depth": 5,
@@ -99,6 +76,6 @@ if __name__ == "__main__":
         active_bouts = ExptActiveBouts(
             args.main_cfg_path,
             use_supervised_learning=supervised_active_bouts,
-            **{**decision_tree_kwargs, **active_bouts_kwargs}
+            **{**active_bouts_decision_tree_kwargs, **active_bouts_kwargs}
         )
         active_bouts.outline_active_bouts()

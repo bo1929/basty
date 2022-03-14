@@ -53,15 +53,15 @@ def backup_old_project(main_cfg_path):
     project_path = main_cfg.get("project_path")
     old_proj_dir = Path(project_path)
     if old_proj_dir.exists():
-        suffix = ".old"
-        while old_proj_dir.with_suffix(suffix).exists():
-            suffix = suffix + ".old"
-        old_proj_dir.replace(old_proj_dir.with_suffix(suffix))
+        suffix = 1
+        while old_proj_dir.with_suffix(f".{str(suffix)}").exists():
+            suffix += 1
+        old_proj_dir.replace(old_proj_dir.with_suffix(f".{str(suffix)}"))
 
 
 if __name__ == "__main__":
     """
-    Add suffix '.old' to the project created by previous tests.
+    Add suffix or increment NUM to the project created by previous tests.
     """
     if args.reset_project:
         backup_old_project(args.main_cfg_path)

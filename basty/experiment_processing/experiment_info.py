@@ -12,6 +12,7 @@ class AnnotationInfo:
         self.has_annotation = False
         self._inactive_annotation = None
         self._noise_annotation = None
+        self._arouse_annotation = None
         self._label_to_behavior = None
         self._behavior_to_label = None
         self._mask_annotated = None
@@ -39,6 +40,18 @@ class AnnotationInfo:
         if not isinstance(value, str):
             raise ValueError("'inactive_annotation' must have type 'str'.")
         self._inactive_annotation = value
+
+    @property
+    def arouse_annotation(self):
+        if self._arouse_annotation is None:
+            raise ValueError("'arouse_annotation' is not set.")
+        return self._arouse_annotation
+
+    @arouse_annotation.setter
+    def arouse_annotation(self, value):
+        if not isinstance(value, str):
+            raise ValueError("'arouse_annotation' must have type 'str'.")
+        self._arouse_annotation = value
 
     @property
     def mask_annotated(self):
@@ -106,6 +119,18 @@ class ExptInfo:
             raise ValueError("'part_to_frame_count' must have type 'dict'.")
         self.expt_frame_count = sum(value.values())
         self._part_to_frame_count = value
+
+    @property
+    def mask_noise(self):
+        if self._mask_noise is None:
+            raise ValueError("'mask_noise' is not set.")
+        return self._mask_noise
+
+    @mask_noise.setter
+    def mask_noise(self, value):
+        if not isinstance(value, np.ndarray) and value.ndim == 1:
+            raise ValueError("'mask_noise' must have type '1D numpy.ndarray'.")
+        self._mask_noise = value
 
     @property
     def mask_dormant(self):

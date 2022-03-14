@@ -3,7 +3,12 @@ import numpy as np
 
 from tqdm import tqdm
 from collections import defaultdict
-from hdbscan import HDBSCAN, membership_vector, all_points_membership_vectors
+from hdbscan import (
+    HDBSCAN,
+    membership_vector,
+    all_points_membership_vectors,
+    # approximate_predict,
+)
 
 import basty.utils.misc as misc
 
@@ -20,26 +25,25 @@ class BehaviorMixin(Project):
         **kwargs,
     ):
         Project.__init__(self, main_cfg_path, **kwargs)
-        self.init_mapping_postprocessing_kwargs(**kwargs)
+        self.init_behavior_mapping_postprocessing_kwargs(**kwargs)
 
-    def assert_compatible_apporach(
-        self, expt_name1, embedding_name1, expt_name2, embedding_name2
-    ):
-        if expt_name1 in embedding_name2 and expt_name2 in embedding_name1:
-            approach1 = embedding_name2.replace(expt_name1, "")
-            approach2 = embedding_name1.replace(expt_name2, "")
+    def is_compatible_approach(self, expt_name1, name1, expt_name2, name2):
+        print(expt_name1, name1, expt_name2, name2)
+        if expt_name1 in name2 and expt_name2 in name1:
+            approach1 = name2.replace(expt_name1, "").replace(expt_name2, "")
+            approach2 = name1.replace(expt_name2, "").replace(expt_name1, "")
         else:
-            approach1 = embedding_name1
-            approach2 = embedding_name2
+            approach1 = name1
+            approach2 = name2
 
-        is_same_approach = approach1 == approach2
+        compatible = approach1 == approach2
 
-        if not is_same_approach:
+        if not compatible:
             self.logger.direct_error(
-                f"Given embedding approaches {approach1} and {approach2}) are not same."
+                f"Given approaches {approach1} and {approach2}) are not same."
                 "Hence they are not compatible."
             )
-        return is_same_approach
+        return compatible
 
 
 class BehaviorEmbedding(BehaviorMixin):
@@ -68,19 +72,15 @@ class BehaviorEmbedding(BehaviorMixin):
         y_expt_dict = defaultdict()
         expt_indices_dict = defaultdict(tuple)
 
-        def iterate_expt_for_embedding(expt_name, pbar):
-            pbar.set_description(
-                f"Loading behavioral reprs. and annotations (if supervised) of {expt_name}"
-            )
+        def iterate_expt_for_embedding(expt_name):
             expt_path = self.expt_path_dict[expt_name]
             expt_record = self._load_joblib_object(expt_path, "expt_record.z")
             X_expt = self._load_numpy_array(expt_path, "behavioral_reprs.npy")
             return X_expt, expt_record, expt_path
 
         prev = 0
-        pbar = tqdm(unannotated_expt_names)
-        for expt_name in pbar:
-            X_expt, expt_record, _ = iterate_expt_for_embedding(expt_name, pbar)
+        for expt_name in unannotated_expt_names:
+            X_expt, expt_record, _ = iterate_expt_for_embedding(expt_name)
             y_expt = np.zeros(X_expt.shape[0], dtype=int) - 1
 
             mask_dormant = expt_record.mask_dormant
@@ -92,9 +92,8 @@ class BehaviorEmbedding(BehaviorMixin):
             expt_indices_dict[expt_name] = prev, prev + y_expt_dict[expt_name].shape[0]
             prev = expt_indices_dict[expt_name][-1]
 
-        pbar = tqdm(annotated_expt_names)
-        for expt_name in pbar:
-            X_expt, expt_record, expt_path = iterate_expt_for_embedding(expt_name, pbar)
+        for expt_name in annotated_expt_names:
+            X_expt, expt_record, expt_path = iterate_expt_for_embedding(expt_name)
 
             assert expt_record.has_annotation
             mask_annotated = expt_record.mask_annotated
@@ -165,13 +164,15 @@ class BehaviorEmbedding(BehaviorMixin):
             )
 
     @misc.timeit
-    def compute_unsupervised_embeddings(self):
+    def compute_unsupervised_disparate_embeddings(self):
         all_expt_names = list(self.expt_path_dict.keys())
         assert all_expt_names
 
         pbar = tqdm(all_expt_names)
         for expt_name in pbar:
-            pbar.set_description(f"Computing unsupervised embeddding for {expt_name}")
+            pbar.set_description(
+                f"Computing unsupervised disparate embeddding for {expt_name}"
+            )
             embedding, expt_indices_dict = self.compute_behavior_embedding(
                 [expt_name], []
             )
@@ -181,19 +182,19 @@ class BehaviorEmbedding(BehaviorMixin):
             self._save_numpy_array(
                 embedding_expt,
                 expt_path / "embeddings",
-                "unsupervised_embedding.npy",
+                "unsupervised_disparate_embedding.npy",
                 depth=3,
             )
 
     @misc.timeit
-    def compute_supervised_embeddings(self):
+    def compute_supervised_disparate_embeddings(self):
         annotated_expt_names = list(self.annotation_path_dict.keys())
         assert annotated_expt_names
 
         pbar = tqdm(annotated_expt_names)
         for ann_expt_name in pbar:
             pbar.set_description(
-                f"Computing unsupervised embeddding for {ann_expt_name}"
+                f"Computing unsupervised disparate embeddding for {ann_expt_name}"
             )
             embedding, expt_indices_dict = self.compute_behavior_embedding(
                 [], [ann_expt_name]
@@ -204,7 +205,7 @@ class BehaviorEmbedding(BehaviorMixin):
             self._save_numpy_array(
                 embedding_expt,
                 expt_path / "embeddings",
-                "supervised_embedding.npy",
+                "supervised_disparate_embedding.npy",
                 depth=3,
             )
 
@@ -275,7 +276,7 @@ class BehaviorClustering(BehaviorMixin):
             embedding_name = embedding_names[i]
             embedding_name_msg = " ".join(embedding_name.split("_"))
             self.logger.direct_info(
-                f"Loading {embedding_name_msg} of {expt_name} for joint clustering"
+                f"Loading {embedding_name_msg} of {expt_name} for joint clustering."
             )
             expt_path = self.expt_path_dict[expt_name]
             embedding_expt = self._load_numpy_array(
@@ -303,7 +304,7 @@ class BehaviorClustering(BehaviorMixin):
                 f"labels_joint_cluster_{embedding_name}.npy",
                 depth=3,
             )
-            cluster_membership = all_points_membership_vectors(clusterer)
+            cluster_membership = all_points_membership_vectors(clusterer)[start:end]
             cluster_membership = np.hstack(
                 (
                     1 - np.sum(cluster_membership[:, 1:], axis=1, keepdims=True),
@@ -391,15 +392,17 @@ class BehaviorClustering(BehaviorMixin):
         self.disparately_cluster(all_expt_names, embedding_name)
 
     @misc.timeit
-    def disparately_cluster_supervised(self):
+    def disparately_cluster_supervised_disparate(self):
         annotated_expt_names = list(self.annotation_path_dict.keys())
-        embedding_name = ["supervised_embedding" for _ in annotated_expt_names]
+        embedding_name = [
+            "supervised_disparate_embedding" for _ in annotated_expt_names
+        ]
         self.disparately_cluster(annotated_expt_names, embedding_name)
 
     @misc.timeit
-    def disparately_cluster_unsupervised(self):
+    def disparately_cluster_unsupervised_disparate(self):
         all_expt_names = list(self.expt_path_dict.keys())
-        embedding_name = ["unsupervised_embedding" for _ in all_expt_names]
+        embedding_name = ["unsupervised_disparate_embedding" for _ in all_expt_names]
         self.disparately_cluster(all_expt_names, embedding_name)
 
     @misc.timeit
@@ -411,89 +414,139 @@ class BehaviorClustering(BehaviorMixin):
             annotated_expt_names, unannotated_expt_names
         ):
             embedding_names = [f"semisupervised_pair_embedding_{unann_expt_name}"]
+            embedding_names = [f"semisupervised_pair_embedding_{ann_expt_name}"]
             self.disparately_cluster([ann_expt_name], embedding_names)
-            # Not really needed.
-            # embedding_names = [f"semisupervised_pair_embedding_{ann_expt_name}"]
-            # self.disparately_cluster([unann_expt_name], embedding_names)
+            self.disparately_cluster([unann_expt_name], embedding_names)
 
     @misc.timeit
-    def compute_cross_pair_cluster_membership(
-        self, expt_name1, expt_name2, embedding_name1, embedding_name2
+    def crosswisely_cluster(
+        self, expt_names1, expt_names2, embedding_names1, embedding_names2
     ):
-        expt_path1 = self.expt_path_dict[expt_name1]
-        expt_path2 = self.expt_path_dict[expt_name2]
+        embedding_expt_dict = defaultdict()
+        expt_indices_dict = defaultdict(tuple)
 
-        assert self.assert_compatible_apporach(
-            expt_name1, embedding_name1, expt_name2, embedding_name2
-        )
+        for idx1, expt_name1 in enumerate(expt_names1):
+            embedding_name1 = embedding_names1[idx1]
+            for idx2, expt_name2 in enumerate(expt_names2):
+                embedding_name2 = embedding_names2[idx2]
+                assert self.is_compatible_approach(
+                    expt_name1, embedding_name1, expt_name2, embedding_name2
+                )
 
-        embedding_expt1 = self._load_numpy_array(
-            expt_path1 / "embeddings", f"{embedding_name1}.npy"
-        )
-        embedding_expt2 = self._load_numpy_array(
-            expt_path2 / "embeddings", f"{embedding_name2}.npy"
-        )
-
-        clusterer = HDBSCAN(**self.HDBSCAN_kwargs)
-        cluster_labels = clusterer.fit_predict(embedding_expt1) + 1
-        cluster_membership = membership_vector(clusterer, embedding_expt2)
-        cluster_membership = np.hstack(
-            (
-                1 - np.sum(cluster_membership[:, 1:], axis=1, keepdims=True),
-                cluster_membership,
+        prev = 0
+        pbar = tqdm(expt_names1)
+        for i, expt_name in enumerate(pbar):
+            embedding_name = embedding_names1[i]
+            embedding_name_msg = " ".join(embedding_name.split("_"))
+            self.logger.direct_info(
+                f"Loading {embedding_name_msg} of {expt_name} for crosswise clustering."
             )
-        )
+            expt_path = self.expt_path_dict[expt_name]
+            embedding_expt = self._load_numpy_array(
+                expt_path / "embeddings", f"{embedding_name}.npy"
+            )
 
-        self._save_numpy_array(
-            cluster_membership,
-            expt_path2 / "clusterings",
-            f"membership_cross_pair_cluster_{embedding_name2}_{embedding_name1}.npy",
-            depth=3,
-        )
-        self._save_numpy_array(
-            cluster_labels,
-            expt_path1 / "clusterings",
-            f"labels_cross_pair_cluster_{embedding_name1}_{embedding_name2}.npy",
-            depth=3,
-        )
+            embedding_expt_dict[expt_name] = embedding_expt
+            expt_indices_dict[expt_name] = prev, prev + embedding_expt.shape[0]
+            prev = expt_indices_dict[expt_name][-1]
+
+        embedding = np.concatenate(list(embedding_expt_dict.values()), axis=0)
+        clusterer = HDBSCAN(**self.HDBSCAN_kwargs)
+        cluster_labels = (clusterer.fit_predict(embedding) + 1).astype(int)
+        cluster_membership = all_points_membership_vectors(clusterer)
+        clustered_expt_names = "_".join(expt_names1)
+
+        pbar = tqdm(expt_names1)
+        for i, expt_name in enumerate(pbar):
+            embedding_name = embedding_names1[i]
+            expt_path = self.expt_path_dict[expt_name]
+            start, end = expt_indices_dict[expt_name]
+            expt_indices_dict[expt_name] = prev, prev + embedding_expt.shape[0]
+
+            cluster_membership_expt = cluster_membership[start:end]
+            cluster_membership_expt = np.hstack(
+                (
+                    1 - np.sum(cluster_membership_expt[:, 1:], axis=1, keepdims=True),
+                    cluster_membership_expt,
+                )
+            )
+            self._save_numpy_array(
+                cluster_membership_expt,
+                expt_path / "clusterings",
+                f"membership_crosswise_cluster_{embedding_name}_{clustered_expt_names}.npy",
+                depth=3,
+            )
+            cluster_labels_expt = cluster_labels[start:end]
+            self._save_numpy_array(
+                cluster_labels_expt,
+                expt_path / "clusterings",
+                f"labels_crosswise_cluster_{embedding_name}_{clustered_expt_names}.npy",
+                depth=3,
+            )
+
+        pbar = tqdm(expt_names2)
+        for i, expt_name in enumerate(pbar):
+            embedding_name = embedding_names2[i]
+            embedding_name_msg = " ".join(embedding_name.split("_"))
+            self.logger.direct_info(
+                f"Crosswisely clustering {embedding_name_msg} of {expt_name}"
+            )
+            expt_path = self.expt_path_dict[expt_name]
+            embedding_expt = self._load_numpy_array(
+                expt_path / "embeddings", f"{embedding_name}.npy"
+            )
+
+            cluster_membership_expt = membership_vector(clusterer, embedding_expt)
+            cluster_membership_expt = np.hstack(
+                (
+                    1 - np.sum(cluster_membership_expt[:, 1:], axis=1, keepdims=True),
+                    cluster_membership_expt,
+                )
+            )
+            self._save_numpy_array(
+                cluster_membership_expt,
+                expt_path / "clusterings",
+                f"membership_crosswise_cluster_{embedding_name}_{clustered_expt_names}.npy",
+                depth=3,
+            )
+            # cluster_labels_expt = (
+            #     approximate_predict(clusterer, embedding_expt) + 1
+            # ).astype(int)
+            cluster_labels_expt = np.argmax(cluster_membership_expt, axis=1)
+            self._save_numpy_array(
+                cluster_labels_expt,
+                expt_path / "clusterings",
+                f"labels_crosswise_cluster_{embedding_name}_{clustered_expt_names}.npy",
+                depth=3,
+            )
 
     @misc.timeit
-    def compute_cross_pair_cluster_membership_semisupervised_pair(self):
+    def crosswisely_cluster_semisupervised_pair(self):
         all_expt_names = list(self.expt_path_dict.keys())
         annotated_expt_names = list(self.annotation_path_dict.keys())
         unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
 
-        pbar = tqdm(
-            misc.list_cartesian_product(annotated_expt_names, unannotated_expt_names)
-        )
-        for ann_expt_name, unann_expt_name in pbar:
+        for ann_expt_name, unann_expt_name in misc.list_cartesian_product(
+            annotated_expt_names, unannotated_expt_names
+        ):
             ann_embedding_name = f"semisupervised_pair_embedding_{unann_expt_name}"
             unann_embedding_name = f"semisupervised_pair_embedding_{ann_expt_name}"
-            pair_name_msg = f"{unann_embedding_name} with {ann_embedding_name}"
-            pbar.set_description(
-                f"Computing cross pair cluster membership {pair_name_msg}"
+            self.crosswisely_cluster(
+                [ann_expt_name],
+                [unann_expt_name],
+                [ann_embedding_name],
+                [unann_embedding_name],
             )
-            self.compute_cross_pair_cluster_membership(
-                ann_expt_name, unann_expt_name, ann_embedding_name, unann_embedding_name
-            )
-            # Not really needed.
-            # self.compute_cross_pair_cluster_membership(
-            #     unann_expt_name, ann_expt_name, unann_embedding_name, ann_embedding_name
-            # )
-            # pair_name_msg = f"{ann_embedding_name} with {unann_embedding_name}"
-            # pbar.set_description(
-            #     f"Computing cross pair cluster membership {pair_name_msg}"
-            # )
 
 
-class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
+class BehaviorCorrespondence(BehaviorMixin):
     def __init__(
         self,
         main_cfg_path,
         **kwargs,
     ):
-        BehaviorEmbedding.__init__(self, main_cfg_path, **kwargs)
-        BehaviorClustering.__init__(self, main_cfg_path, **kwargs)
+        BehaviorMixin.__init__(self, main_cfg_path, **kwargs)
+        self.init_behavior_correspondence_kwargs(**kwargs)
 
     @misc.timeit
     def map_cluster_labels_to_behavior_labels(self, expt_name, clustering_name):
@@ -504,7 +557,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
         y_ann = self._load_numpy_array(expt_path, "annotations.npy")
 
         unsupervised_embedding_names = [
-            "unsupervised_embedding",
+            "unsupervised_disparate_embedding",
             "unsupervised_joint_embedding",
         ]
         if any([name in clustering_name for name in unsupervised_embedding_names]):
@@ -518,6 +571,10 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
 
         mapping_dictionary = defaultdict(dict)
         y_cluster_uniq = np.unique(y_cluster)
+        y_ann_uniq, ann_uniq_counts = np.unique(y_ann, return_counts=True)
+        ann_counts_ref = {
+            y_ann_uniq[i]: ann_uniq_counts[i] for i in range(y_ann_uniq.shape[0])
+        }
         for cluster_lbl in y_cluster_uniq:
             y_ann_masked = y_ann[y_cluster == cluster_lbl]
             y_ann_uniq_c, ann_uniq_c_counts = np.unique(
@@ -532,25 +589,27 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
             # }
 
             for idx, ann_lbl in enumerate(y_ann_uniq_c):
+                denom = ann_counts_ref[ann_lbl]
+                # denom = y_ann_masked.shape[0]
                 mapping_dictionary[int(cluster_lbl)][int(ann_lbl)] = float(
-                    ann_uniq_c_counts[idx] / y_ann_masked.shape[0]
+                    ann_uniq_c_counts[idx] / denom
                 )
                 # ann_behavior = expt_record.label_to_behavior[ann_lbl]
                 # mapping_dictionary[int(cluster_lbl)][ann_behavior] = float(
-                #     ann_uniq_c_counts[idx] / y_ann_masked.shape[0]
+                #     ann_uniq_c_counts[idx] / denom
                 # )
 
-            assert abs(sum(mapping_dictionary[int(cluster_lbl)].values()) - 1) < EPS
+            # assert abs(sum(mapping_dictionary[int(cluster_lbl)].values()) - 1) < EPS
 
         self._save_yaml_dictionary(
             dict(mapping_dictionary),
-            expt_path / "mappings",
+            expt_path / "correspondences",
             f"mapping_{clustering_name}.yaml",
             depth=3,
         )
 
     @misc.timeit
-    def map_disparate_cluster_labels_semisupervised_pair(self):
+    def map_disparate_cluster_semisupervised_pair(self):
         all_expt_names = list(self.expt_path_dict.keys())
         annotated_expt_names = list(self.annotation_path_dict.keys())
         unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
@@ -566,11 +625,11 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
             self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
 
     @misc.timeit
-    def map_disparate_cluster_labels_supervised(self):
+    def map_disparate_cluster_supervised_disparate(self):
         annotated_expt_names = list(self.annotation_path_dict.keys())
         pbar = tqdm(annotated_expt_names)
         for ann_expt_name in pbar:
-            embedding_name = "supervised_embedding"
+            embedding_name = "supervised_disparate_embedding"
             clustering_name = f"disparate_cluster_{embedding_name}"
             pbar.set_description(
                 f"Mapping cluster labels of {clustering_name} to behavior labels"
@@ -578,7 +637,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
             self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
 
     @misc.timeit
-    def map_disparate_cluster_labels_supervised_joint(self):
+    def map_disparate_cluster_supervised_joint(self):
         annotated_expt_names = list(self.annotation_path_dict.keys())
         pbar = tqdm(annotated_expt_names)
         for ann_expt_name in pbar:
@@ -590,11 +649,11 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
             self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
 
     @misc.timeit
-    def map_disparate_cluster_labels_unsupervised(self):
+    def map_disparate_cluster_unsupervised_disparate(self):
         annotated_expt_names = list(self.annotation_path_dict.keys())
         pbar = tqdm(annotated_expt_names)
         for ann_expt_name in pbar:
-            embedding_name = "unsupervised_embedding"
+            embedding_name = "unsupervised_disparate_embedding"
             clustering_name = f"disparate_cluster_{embedding_name}"
             pbar.set_description(
                 f"Mapping cluster labels of {clustering_name} to behavior labels"
@@ -602,7 +661,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
             self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
 
     @misc.timeit
-    def map_disparate_cluster_labels_unsupervised_joint(self):
+    def map_disparate_cluster_unsupervised_joint(self):
         annotated_expt_names = list(self.annotation_path_dict.keys())
         pbar = tqdm(annotated_expt_names)
         for ann_expt_name in pbar:
@@ -614,7 +673,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
             self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
 
     @misc.timeit
-    def map_joint_cluster_labels_semisupervised_pair(self):
+    def map_joint_cluster_semisupervised_pair(self):
         all_expt_names = list(self.expt_path_dict.keys())
         annotated_expt_names = list(self.annotation_path_dict.keys())
         unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
@@ -630,7 +689,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
             self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
 
     @misc.timeit
-    def map_joint_cluster_labels_supervised_joint(self):
+    def map_joint_cluster_supervised_joint(self):
         annotated_expt_names = list(self.annotation_path_dict.keys())
         pbar = tqdm(annotated_expt_names)
         for ann_expt_name in pbar:
@@ -642,7 +701,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
             self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
 
     @misc.timeit
-    def map_joint_cluster_labels_unsupervised_joint(self):
+    def map_joint_cluster_unsupervised_joint(self):
         annotated_expt_names = list(self.annotation_path_dict.keys())
         pbar = tqdm(annotated_expt_names)
         for ann_expt_name in pbar:
@@ -654,7 +713,7 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
             self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
 
     @misc.timeit
-    def map_cross_pair_cluster_labels_semisupervised_pair(self):
+    def map_crosswise_cluster_semisupervised_pair(self):
         all_expt_names = list(self.expt_path_dict.keys())
         annotated_expt_names = list(self.annotation_path_dict.keys())
         unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
@@ -663,139 +722,145 @@ class BehaviorMapping(BehaviorEmbedding, BehaviorClustering):
         )
         for ann_expt_name, unann_expt_name in pbar:
             embedding_name1 = f"semisupervised_pair_embedding_{unann_expt_name}"
-            embedding_name2 = f"semisupervised_pair_embedding_{ann_expt_name}"
-            clustering_name = f"cross_pair_cluster_{embedding_name1}_{embedding_name2}"
+            clustering_name = f"crosswise_cluster_{embedding_name1}_{ann_expt_name}"
             pbar.set_description(
                 f"Mapping cluster labels of {clustering_name} to behavior labels"
             )
             self.map_cluster_labels_to_behavior_labels(ann_expt_name, clustering_name)
 
     @misc.timeit
-    def compute_behavior_membership(self, expt_name, clustering_name):
-        expt_path = self.expt_path_dict[expt_name]
+    def disparately_compute_behavior_score(self, expt_names, clustering_names):
+        pbar = tqdm(expt_names)
+        for i, expt_name in enumerate(pbar):
+            clustering_name = clustering_names[i]
+            expt_path = self.expt_path_dict[expt_name]
 
-        expt_record = self._load_joblib_object(expt_path, "expt_record.z")
+            expt_record = self._load_joblib_object(expt_path, "expt_record.z")
+            assert expt_record.has_annotation
 
-        assert expt_record.has_annotation
-
-        cluster_membership = self._load_numpy_array(
-            expt_path / "clusterings",
-            f"membership_{clustering_name}.npy",
-        )
-        mapping = self._load_yaml_dictionary(
-            expt_path / "mappings",
-            f"mapping_{clustering_name}.yaml",
-        )
-
-        behavior_membership = np.zeros(
-            (cluster_membership.shape[0], len(expt_record.label_to_behavior))
-        )
-        for cluster_lbl, behavior_weights in mapping.items():
-            for behavior_lbl, weight in behavior_weights.items():
-                behavior_membership[:, behavior_lbl] = (
-                    behavior_membership[:, behavior_lbl]
-                    + cluster_membership[:, cluster_lbl] * weight
-                )
-        self._save_numpy_array(
-            behavior_membership,
-            expt_path / "mappings",
-            f"membership_{clustering_name.replace('cluster', 'behavior')}.npy",
-            depth=3,
-        )
-
-    @misc.timeit
-    def compute_cross_pair_behavior_membership(
-        self, expt_name1, expt_name2, embedding_name1, embedding_name2
-    ):
-        expt_path1 = self.expt_path_dict[expt_name1]
-        expt_path2 = self.expt_path_dict[expt_name2]
-
-        expt_record1 = self._load_joblib_object(expt_path1, "expt_record.z")
-
-        assert expt_record1.has_annotation
-        assert self.assert_compatible_apporach(
-            expt_name1, embedding_name1, expt_name2, embedding_name2
-        )
-
-        cluster_membership = self._load_numpy_array(
-            expt_path2 / "clusterings",
-            f"membership_cross_pair_cluster_{embedding_name2}_{embedding_name1}.npy",
-        )
-        # cluster_labels = self._load_numpy_array(
-        #     expt_path1 / "clusterings",
-        #     f"cross_pair_cluster_labels_{embedding_name1}_{embedding_name2}.npy",
-        # )
-        mapping = self._load_yaml_dictionary(
-            expt_path1 / "mappings",
-            f"mapping_cross_pair_cluster_{embedding_name1}_{embedding_name2}.yaml",
-        )
-
-        behavior_membership = np.zeros(
-            (cluster_membership.shape[0], len(expt_record1.label_to_behavior))
-        )
-        for cluster_lbl, behavior_weights in mapping.items():
-            for behavior_lbl, weight in behavior_weights.items():
-                behavior_membership[:, behavior_lbl] = (
-                    behavior_membership[:, behavior_lbl]
-                    + cluster_membership[:, cluster_lbl] * weight
-                )
-        self._save_numpy_array(
-            behavior_membership,
-            expt_path2 / "mappings",
-            f"membership_cross_pair_behavior_{embedding_name2}_{embedding_name1}.npy",
-            depth=3,
-        )
-
-    @misc.timeit
-    def compute_cross_pair_behavior_membership_semisupervised_pair(self):
-        all_expt_names = list(self.expt_path_dict.keys())
-        annotated_expt_names = list(self.annotation_path_dict.keys())
-        unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
-
-        pbar = tqdm(
-            misc.list_cartesian_product(annotated_expt_names, unannotated_expt_names)
-        )
-        for ann_expt_name, unann_expt_name in pbar:
-            ann_embedding_name = f"semisupervised_pair_embedding_{unann_expt_name}"
-            unann_embedding_name = f"semisupervised_pair_embedding_{ann_expt_name}"
-            pair_name_msg = f"{unann_embedding_name} with {ann_embedding_name}"
-            pbar.set_description(
-                f"Computing cross pair behavior membership {pair_name_msg}"
+            cluster_membership = self._load_numpy_array(
+                expt_path / "clusterings",
+                f"membership_{clustering_name}.npy",
             )
-            self.compute_cross_pair_behavior_membership(
-                ann_expt_name, unann_expt_name, ann_embedding_name, unann_embedding_name
+            mapping = self._load_yaml_dictionary(
+                expt_path / "correspondences",
+                f"mapping_{clustering_name}.yaml",
             )
 
-    @misc.timeit
-    def compute_cross_pair_mean_behavior_membership_semisupervised_pair(self):
-        all_expt_names = list(self.expt_path_dict.keys())
-        annotated_expt_names = list(self.annotation_path_dict.keys())
-        unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
-
-        pbar = tqdm(
-            misc.list_cartesian_product(annotated_expt_names, unannotated_expt_names)
-        )
-        behavior_membership_dict = defaultdict(list)
-        for ann_expt_name, unann_expt_name in pbar:
-            unann_expt_path = self.expt_path_dict[unann_expt_name]
-            ann_embedding_name = f"semisupervised_pair_embedding_{unann_expt_name}"
-            unann_embedding_name = f"semisupervised_pair_embedding_{ann_expt_name}"
-            behavior_membership = self._load_numpy_array(
-                unann_expt_path / "mappings",
-                f"membership_cross_pair_behavior_{unann_embedding_name}_{ann_embedding_name}.npy",
+            behavior_score = np.zeros(
+                (cluster_membership.shape[0], len(expt_record.label_to_behavior))
             )
-            behavior_membership_dict[unann_expt_name].append(behavior_membership)
-
-        for (unann_expt_name, behavior_memberships) in behavior_membership_dict.items():
-            unann_expt_path = self.expt_path_dict[unann_expt_name]
-            mean_behavior_membership = np.mean(behavior_memberships, axis=0)
-            embedding_name_msg = f"semisupervised_pair_embedding_{unann_expt_name}"
-            pbar.set_description(
-                f"Computing mean behavior membership of {embedding_name_msg}"
-            )
+            for cluster_lbl, behavior_weights in mapping.items():
+                for behavior_lbl, weight in behavior_weights.items():
+                    behavior_score[:, behavior_lbl] = (
+                        behavior_score[:, behavior_lbl]
+                        + cluster_membership[:, cluster_lbl] * weight
+                    )
             self._save_numpy_array(
-                mean_behavior_membership,
-                unann_expt_path / "mappings",
-                "avg_membership_cross_pair_behavior_semisupervised_pair_embedding.npy",
+                behavior_score,
+                expt_path / "correspondences",
+                f"score_{clustering_name.replace('cluster', 'behavior')}.npy",
                 depth=3,
             )
+
+    @misc.timeit
+    def crosswisely_compute_behavior_score(
+        self, expt_names1, expt_names2, clustering_names1, clustering_names2
+    ):
+        total_mapping = defaultdict(dict)
+        label_to_behavior = defaultdict()
+
+        for idx1, expt_name1 in enumerate(expt_names1):
+            clustering_name1 = clustering_names1[idx1]
+            for idx2, expt_name2 in enumerate(expt_names2):
+                clustering_name2 = clustering_names2[idx2]
+                assert self.is_compatible_approach(
+                    expt_name1, clustering_name1, expt_name2, clustering_name2
+                )
+        assert all(list(map(lambda x: "disparate_cluster" not in x, clustering_names1)))
+        assert all(list(map(lambda x: "disparate_cluster" not in x, clustering_names2)))
+
+        for idx, expt_name in enumerate(expt_names1):
+            expt_path = self.expt_path_dict[expt_name]
+            clustering_name = clustering_names1[idx]
+            expt_record = self._load_joblib_object(expt_path, "expt_record.z")
+
+            assert expt_record.has_annotation
+            assert idx == 0 or label_to_behavior == expt_record.label_to_behavior
+            label_to_behavior = expt_record.label_to_behavior
+
+            mapping = self._load_yaml_dictionary(
+                expt_path / "correspondences",
+                f"mapping_{clustering_name}.yaml",
+            )
+            for cluster_lbl, behavior_weights in mapping.items():
+                for behavior_lbl, weight in behavior_weights.items():
+                    value = total_mapping[cluster_lbl].get(
+                        behavior_lbl, 0
+                    ) + weight / len(expt_names1)
+                    total_mapping[cluster_lbl][behavior_lbl] = value
+
+        expt_names = expt_names1 + expt_names2
+        clustering_names = clustering_names1 + clustering_names2
+
+        for idx, expt_name in enumerate(expt_names):
+            expt_path = self.expt_path_dict[expt_name]
+            clustering_name = clustering_names[idx]
+
+            cluster_membership = self._load_numpy_array(
+                expt_path / "clusterings",
+                f"membership_{clustering_name}.npy",
+            )
+
+            behavior_score = np.zeros(
+                (cluster_membership.shape[0], len(label_to_behavior))
+            )
+            for cluster_lbl, behavior_weights in mapping.items():
+                for behavior_lbl, weight in behavior_weights.items():
+                    behavior_score[:, behavior_lbl] = (
+                        behavior_score[:, behavior_lbl]
+                        + cluster_membership[:, cluster_lbl] * weight
+                    )
+            self._save_numpy_array(
+                behavior_score,
+                expt_path / "correspondences",
+                f"score_{clustering_name.replace('cluster', 'behavior')}.npy",
+                depth=3,
+            )
+
+    @misc.timeit
+    def crosswisely_compute_behavior_score_crosswise_cluster_semisupervised_pair(
+        self,
+    ):
+        all_expt_names = list(self.expt_path_dict.keys())
+        annotated_expt_names = list(self.annotation_path_dict.keys())
+        unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
+
+        for ann_expt_name, unann_expt_name in misc.list_cartesian_product(
+            annotated_expt_names, unannotated_expt_names
+        ):
+            ann_embedding_name = f"semisupervised_pair_embedding_{unann_expt_name}"
+            unann_embedding_name = f"semisupervised_pair_embedding_{ann_expt_name}"
+            ann_clustering_name = (
+                f"crosswise_cluster_{ann_embedding_name}_{ann_expt_name}"
+            )
+            unann_clustering_name = (
+                f"crosswise_cluster_{unann_embedding_name}_{ann_expt_name}"
+            )
+            self.crosswisely_compute_behavior_score(
+                [ann_expt_name],
+                [unann_expt_name],
+                [ann_clustering_name],
+                [unann_clustering_name],
+            )
+
+
+class BehaviorMapping(BehaviorEmbedding, BehaviorClustering, BehaviorCorrespondence):
+    def __init__(
+        self,
+        main_cfg_path,
+        **kwargs,
+    ):
+        BehaviorEmbedding.__init__(self, main_cfg_path, **kwargs)
+        BehaviorClustering.__init__(self, main_cfg_path, **kwargs)
+        BehaviorCorrespondence.__init__(self, main_cfg_path, **kwargs)

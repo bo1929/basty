@@ -21,8 +21,6 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
-main_cfg_path = args.main_cfg_path
-reset_project = args.reset_project
 
 
 def backup_old_project(main_cfg_path):
@@ -30,21 +28,21 @@ def backup_old_project(main_cfg_path):
     project_path = main_cfg.get("project_path")
     old_proj_dir = Path(project_path)
     if old_proj_dir.exists():
-        suffix = ".old"
-        while old_proj_dir.with_suffix(suffix).exists():
-            suffix = suffix + ".old"
-        old_proj_dir.replace(old_proj_dir.with_suffix(suffix))
+        suffix = 1
+        while old_proj_dir.with_suffix(f".{str(suffix)}").exists():
+            suffix += 1
+        old_proj_dir.replace(old_proj_dir.with_suffix(f".{str(suffix)}"))
 
 
 if __name__ == "__main__":
     """
-    Add suffix '.old' to the project created by previous tests.
+    Add suffix or increment NUM to the project created by previous tests.
     """
-    if reset_project:
-        backup_old_project(main_cfg_path)
+    if args.reset_project:
+        backup_old_project(args.main_cfg_path)
 
     proj = Project(
-        main_cfg_path,
+        args.main_cfg_path,
         annotation_priority=[],
         inactive_annotation="Idle",
         noise_annotation="Noise",
