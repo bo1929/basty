@@ -35,6 +35,7 @@ if __name__ == "__main__":
         "datums": [],
         "datums_winsize": FPS,
         "log_scale": False,
+        "normalize": False,
         "min_dormant": 300 * FPS,
         "num_gmm_comp": 2,
         "threshold_key": "local_max",
@@ -58,13 +59,13 @@ if __name__ == "__main__":
         "datums_list": [[]],
         "datums_winsize": FPS // 5,
         "log_scale": True,
+        "normalize": True,
         "coefs_summary_method": "max",
         "post_processing_winsize": FPS * 2,
         "post_processing_wintype": "boxcar",
     }
     active_bouts_decision_tree_kwargs = {
-        "n_estimators": 10,
-        "n_estimators": 10,
+        "n_estimators": 5,
         "max_depth": 5,
         "min_samples_leaf": 10 ** 3,
         "max_features": "sqrt",

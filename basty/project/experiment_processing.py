@@ -4,6 +4,7 @@ import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 from collections import defaultdict
+from sklearn.preprocessing import normalize
 
 import basty.utils.io as io
 import basty.utils.misc as misc
@@ -225,6 +226,9 @@ class ExptDormantEpochs(Project):
             ).reshape((-1, 1))
             if self.log_scale:
                 X = np.log2(X + 1)
+            if self.normalize:
+                X = normalize(X, norm="l1")
+
             X_expt_dict[name] = X
 
             if not self.use_supervised_learning:
@@ -343,6 +347,9 @@ class ExptActiveBouts(Project):
             del df_coefs
 
             X = np.stack(values, axis=1)
+            if self.normalize:
+                X = normalize(X, norm="l1")
+
             X_expt_dict[name] = X
             del values
 

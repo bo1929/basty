@@ -64,6 +64,7 @@ class ParameterHandler:
         self.datums = kwargs.pop("datums", [])
         self.datums_winsize = kwargs.pop("datums_winsize", fps * 1)
         self.log_scale = kwargs.pop("log_scale", False)
+        self.normalize = kwargs.pop("normalize", False)
 
         self.min_dormant = kwargs.pop("min_dormant", 300 * fps)
 
@@ -104,8 +105,9 @@ class ParameterHandler:
     def init_active_bouts_kwargs(self, fps, use_supervised_learning, **kwargs):
         self.datums_list = kwargs.pop("datums_list", [[]])
         self.datums_winsize = kwargs.pop("datums_winsize", fps // 5)
-        self.log_scale = kwargs.pop("log_scale", True)
         self.coefs_summary_method = kwargs.pop("coefs_summary_method", "sum")
+        self.log_scale = kwargs.pop("log_scale", True)
+        self.normalize = kwargs.pop("normalize", True)
 
         self.post_processing_winsize = kwargs.pop("post_processing_winsize", fps * 2)
         self.post_processing_wintype = kwargs.pop("post_processing_wintype", "boxcar")
