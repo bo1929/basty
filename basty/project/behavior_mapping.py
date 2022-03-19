@@ -3,6 +3,7 @@ import numpy as np
 
 from tqdm import tqdm
 from collections import defaultdict
+from sklearn.preprocessing import normalize
 from hdbscan import (
     HDBSCAN,
     membership_vector,
@@ -28,7 +29,6 @@ class BehaviorMixin(Project):
         self.init_behavior_mapping_postprocessing_kwargs(**kwargs)
 
     def is_compatible_approach(self, expt_name1, name1, expt_name2, name2):
-        print(expt_name1, name1, expt_name2, name2)
         if expt_name1 in name2 and expt_name2 in name1:
             approach1 = name2.replace(expt_name1, "").replace(expt_name2, "")
             approach2 = name1.replace(expt_name2, "").replace(expt_name1, "")
@@ -194,7 +194,7 @@ class BehaviorEmbedding(BehaviorMixin):
         pbar = tqdm(annotated_expt_names)
         for ann_expt_name in pbar:
             pbar.set_description(
-                f"Computing unsupervised disparate embeddding for {ann_expt_name}"
+                f"Computing supervised disparate embeddding for {ann_expt_name}"
             )
             embedding, expt_indices_dict = self.compute_behavior_embedding(
                 [], [ann_expt_name]
@@ -307,7 +307,7 @@ class BehaviorClustering(BehaviorMixin):
             cluster_membership = all_points_membership_vectors(clusterer)[start:end]
             cluster_membership = np.hstack(
                 (
-                    1 - np.sum(cluster_membership[:, 1:], axis=1, keepdims=True),
+                    1 - np.sum(cluster_membership[:, :], axis=1, keepdims=True),
                     cluster_membership,
                 )
             )
@@ -368,7 +368,7 @@ class BehaviorClustering(BehaviorMixin):
             cluster_membership = all_points_membership_vectors(clusterer)
             cluster_membership = np.hstack(
                 (
-                    1 - np.sum(cluster_membership[:, 1:], axis=1, keepdims=True),
+                    1 - np.sum(cluster_membership[:, :], axis=1, keepdims=True),
                     cluster_membership,
                 )
             )
@@ -466,7 +466,7 @@ class BehaviorClustering(BehaviorMixin):
             cluster_membership_expt = cluster_membership[start:end]
             cluster_membership_expt = np.hstack(
                 (
-                    1 - np.sum(cluster_membership_expt[:, 1:], axis=1, keepdims=True),
+                    1 - np.sum(cluster_membership_expt[:, :], axis=1, keepdims=True),
                     cluster_membership_expt,
                 )
             )
@@ -570,36 +570,37 @@ class BehaviorCorrespondence(BehaviorMixin):
         )
 
         mapping_dictionary = defaultdict(dict)
-        y_cluster_uniq = np.unique(y_cluster)
+        y_cluster_uniq, cluster_uniq_counts = np.unique(y_cluster, return_counts=True)
         y_ann_uniq, ann_uniq_counts = np.unique(y_ann, return_counts=True)
         ann_counts_ref = {
             y_ann_uniq[i]: ann_uniq_counts[i] for i in range(y_ann_uniq.shape[0])
         }
-        for cluster_lbl in y_cluster_uniq:
+        for idx1, cluster_lbl in enumerate(y_cluster_uniq):
             y_ann_masked = y_ann[y_cluster == cluster_lbl]
-            y_ann_uniq_c, ann_uniq_c_counts = np.unique(
+            y_ann_uniq_cluster, ann_uniq_cluster_counts = np.unique(
                 y_ann_masked, return_counts=True
             )
 
             mapping_dictionary[int(cluster_lbl)] = {
                 key: 0 for key in expt_record.label_to_behavior.keys()
             }
-            # mapping_dictionary[int(cluster_lbl)] = {
-            #     key: 0 for key in expt_record.behavior_to_label.keys()
-            # }
 
-            for idx, ann_lbl in enumerate(y_ann_uniq_c):
-                denom = ann_counts_ref[ann_lbl]
-                # denom = y_ann_masked.shape[0]
-                mapping_dictionary[int(cluster_lbl)][int(ann_lbl)] = float(
-                    ann_uniq_c_counts[idx] / denom
+            for idx2, ann_lbl in enumerate(y_ann_uniq_cluster):
+                ann_cluster_count = ann_uniq_cluster_counts[idx2]
+                tf = ann_cluster_count / cluster_uniq_counts[idx1]
+                # tf = 0.5 + 0.5 * (ann_cluster_count / max(ann_uniq_cluster_counts))
+                # tf = np.log2(1 + (ann_cluster_count/ cluster_uniq_counts[idx1]))
+                denom = cluster_uniq_counts[idx1] / ann_counts_ref[ann_lbl]
+                # idf = len(y_cluster_uniq) / len(np.unique(y_cluster[y_ann == ann_lbl]))
+                # denom = np.log2(idf)
+                mapping_dictionary[cluster_lbl][ann_lbl] = float(tf * denom)
+
+            sum_weights = sum(list(mapping_dictionary[int(cluster_lbl)].values()))
+            for ann_lbl in y_ann_uniq_cluster:
+                mapping_dictionary[cluster_lbl][ann_lbl] = (
+                    mapping_dictionary[cluster_lbl][ann_lbl] / sum_weights
                 )
-                # ann_behavior = expt_record.label_to_behavior[ann_lbl]
-                # mapping_dictionary[int(cluster_lbl)][ann_behavior] = float(
-                #     ann_uniq_c_counts[idx] / denom
-                # )
-
-            # assert abs(sum(mapping_dictionary[int(cluster_lbl)].values()) - 1) < EPS
+            assert abs(sum(mapping_dictionary[int(cluster_lbl)].values()) - 1) < EPS
 
         self._save_yaml_dictionary(
             dict(mapping_dictionary),
@@ -732,30 +733,35 @@ class BehaviorCorrespondence(BehaviorMixin):
     def disparately_compute_behavior_score(self, expt_names, clustering_names):
         pbar = tqdm(expt_names)
         for i, expt_name in enumerate(pbar):
-            clustering_name = clustering_names[i]
             expt_path = self.expt_path_dict[expt_name]
+            clustering_name = clustering_names[i]
 
             expt_record = self._load_joblib_object(expt_path, "expt_record.z")
+            label_to_behavior = expt_record.label_to_behavior
+            # behavior_to_label = expt_record.behavior_to_label
+            num_behavior = len(label_to_behavior)
             assert expt_record.has_annotation
 
-            cluster_membership = self._load_numpy_array(
-                expt_path / "clusterings",
-                f"membership_{clustering_name}.npy",
-            )
             mapping = self._load_yaml_dictionary(
                 expt_path / "correspondences",
                 f"mapping_{clustering_name}.yaml",
             )
 
-            behavior_score = np.zeros(
-                (cluster_membership.shape[0], len(expt_record.label_to_behavior))
+            cluster_membership = self._load_numpy_array(
+                expt_path / "clusterings",
+                f"membership_{clustering_name}.npy",
             )
+            behavior_score = np.zeros((cluster_membership.shape[0], num_behavior))
             for cluster_lbl, behavior_weights in mapping.items():
                 for behavior_lbl, weight in behavior_weights.items():
                     behavior_score[:, behavior_lbl] = (
                         behavior_score[:, behavior_lbl]
-                        + cluster_membership[:, cluster_lbl] * weight
+                        + cluster_membership[:, cluster_lbl]
+                        * weight
+                        * cluster_membership.shape[1]
                     )
+            behavior_score = normalize(behavior_score, norm="l1")
+
             self._save_numpy_array(
                 behavior_score,
                 expt_path / "correspondences",
@@ -783,11 +789,13 @@ class BehaviorCorrespondence(BehaviorMixin):
         for idx, expt_name in enumerate(expt_names1):
             expt_path = self.expt_path_dict[expt_name]
             clustering_name = clustering_names1[idx]
-            expt_record = self._load_joblib_object(expt_path, "expt_record.z")
 
-            assert expt_record.has_annotation
-            assert idx == 0 or label_to_behavior == expt_record.label_to_behavior
+            expt_record = self._load_joblib_object(expt_path, "expt_record.z")
             label_to_behavior = expt_record.label_to_behavior
+            # behavior_to_label = expt_record.behavior_to_label
+            num_behavior = len(label_to_behavior)
+            assert idx == 0 or (label_to_behavior == expt_record.label_to_behavior)
+            assert expt_record.has_annotation
 
             mapping = self._load_yaml_dictionary(
                 expt_path / "correspondences",
@@ -795,10 +803,9 @@ class BehaviorCorrespondence(BehaviorMixin):
             )
             for cluster_lbl, behavior_weights in mapping.items():
                 for behavior_lbl, weight in behavior_weights.items():
-                    value = total_mapping[cluster_lbl].get(
-                        behavior_lbl, 0
-                    ) + weight / len(expt_names1)
-                    total_mapping[cluster_lbl][behavior_lbl] = value
+                    total_mapping[cluster_lbl][behavior_lbl] = (
+                        total_mapping[cluster_lbl].get(behavior_lbl, 0) + weight
+                    )
 
         expt_names = expt_names1 + expt_names2
         clustering_names = clustering_names1 + clustering_names2
@@ -811,16 +818,19 @@ class BehaviorCorrespondence(BehaviorMixin):
                 expt_path / "clusterings",
                 f"membership_{clustering_name}.npy",
             )
-
-            behavior_score = np.zeros(
-                (cluster_membership.shape[0], len(label_to_behavior))
-            )
-            for cluster_lbl, behavior_weights in mapping.items():
+            behavior_score = np.zeros((cluster_membership.shape[0], num_behavior))
+            for cluster_lbl, behavior_weights in total_mapping.items():
                 for behavior_lbl, weight in behavior_weights.items():
-                    behavior_score[:, behavior_lbl] = (
-                        behavior_score[:, behavior_lbl]
-                        + cluster_membership[:, cluster_lbl] * weight
+                    cluster_score = (
+                        cluster_membership[:, cluster_lbl]
+                        * weight
+                        * cluster_membership.shape[1]
                     )
+                    behavior_score[:, behavior_lbl] = (
+                        behavior_score[:, behavior_lbl] + cluster_score
+                    )
+            behavior_score = normalize(behavior_score, norm="l1")
+
             self._save_numpy_array(
                 behavior_score,
                 expt_path / "correspondences",
