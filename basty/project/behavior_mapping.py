@@ -595,6 +595,7 @@ class BehaviorCorrespondence(BehaviorMixin):
                 # denom = np.log2(idf)
                 mapping_dictionary[cluster_lbl][ann_lbl] = float(tf * denom)
 
+            # L1- normalization of mapping weights.
             sum_weights = sum(list(mapping_dictionary[int(cluster_lbl)].values()))
             for ann_lbl in y_ann_uniq_cluster:
                 mapping_dictionary[cluster_lbl][ann_lbl] = (
@@ -737,10 +738,13 @@ class BehaviorCorrespondence(BehaviorMixin):
             clustering_name = clustering_names[i]
 
             expt_record = self._load_joblib_object(expt_path, "expt_record.z")
-            label_to_behavior = expt_record.label_to_behavior
-            # behavior_to_label = expt_record.behavior_to_label
-            num_behavior = len(label_to_behavior)
             assert expt_record.has_annotation
+            label_to_behavior = expt_record.label_to_behavior
+            behavior_to_label = expt_record.behavior_to_label
+            inactive_annotation = expt_record.inactive_annotation
+
+            num_behavior = len(label_to_behavior)
+            assert num_behavior > 1
 
             mapping = self._load_yaml_dictionary(
                 expt_path / "correspondences",
@@ -754,6 +758,12 @@ class BehaviorCorrespondence(BehaviorMixin):
             behavior_score = np.zeros((cluster_membership.shape[0], num_behavior))
             for cluster_lbl, behavior_weights in mapping.items():
                 for behavior_lbl, weight in behavior_weights.items():
+                    if behavior_lbl == behavior_to_label[inactive_annotation]:
+                        weight += (
+                            np.sqrt(1 / (num_behavior - 1))
+                            if not cluster_lbl
+                            else 1 / (num_behavior - 1)
+                        )
                     behavior_score[:, behavior_lbl] = (
                         behavior_score[:, behavior_lbl]
                         + cluster_membership[:, cluster_lbl]
@@ -775,6 +785,8 @@ class BehaviorCorrespondence(BehaviorMixin):
     ):
         total_mapping = defaultdict(dict)
         label_to_behavior = defaultdict()
+        behavior_to_label = defaultdict()
+        inactive_annotation = str()
 
         for idx1, expt_name1 in enumerate(expt_names1):
             clustering_name1 = clustering_names1[idx1]
@@ -791,11 +803,13 @@ class BehaviorCorrespondence(BehaviorMixin):
             clustering_name = clustering_names1[idx]
 
             expt_record = self._load_joblib_object(expt_path, "expt_record.z")
-            label_to_behavior = expt_record.label_to_behavior
-            # behavior_to_label = expt_record.behavior_to_label
-            num_behavior = len(label_to_behavior)
             assert idx == 0 or (label_to_behavior == expt_record.label_to_behavior)
+            assert idx == 0 or (behavior_to_label == expt_record.behavior_to_label)
+            assert idx == 0 or (inactive_annotation == expt_record.inactive_annotation)
             assert expt_record.has_annotation
+            label_to_behavior = expt_record.label_to_behavior
+            behavior_to_label = expt_record.behavior_to_label
+            inactive_annotation = expt_record.inactive_annotation
 
             mapping = self._load_yaml_dictionary(
                 expt_path / "correspondences",
@@ -803,9 +817,13 @@ class BehaviorCorrespondence(BehaviorMixin):
             )
             for cluster_lbl, behavior_weights in mapping.items():
                 for behavior_lbl, weight in behavior_weights.items():
+                    weight_n = weight / len(expt_names1)
                     total_mapping[cluster_lbl][behavior_lbl] = (
-                        total_mapping[cluster_lbl].get(behavior_lbl, 0) + weight
+                        total_mapping[cluster_lbl].get(behavior_lbl, 0) + weight_n
                     )
+
+        num_behavior = len(label_to_behavior)
+        assert num_behavior > 1
 
         expt_names = expt_names1 + expt_names2
         clustering_names = clustering_names1 + clustering_names2
@@ -821,6 +839,12 @@ class BehaviorCorrespondence(BehaviorMixin):
             behavior_score = np.zeros((cluster_membership.shape[0], num_behavior))
             for cluster_lbl, behavior_weights in total_mapping.items():
                 for behavior_lbl, weight in behavior_weights.items():
+                    if behavior_lbl == behavior_to_label[inactive_annotation]:
+                        weight += (
+                            np.sqrt(1 / (num_behavior - 1))
+                            if not cluster_lbl
+                            else 1 / (num_behavior - 1)
+                        )
                     cluster_score = (
                         cluster_membership[:, cluster_lbl]
                         * weight
