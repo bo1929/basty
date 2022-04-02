@@ -3,7 +3,7 @@ import argparse
 from basty.project.behavior_mapping import BehaviorMapping
 
 parser = argparse.ArgumentParser(
-    description="Initialize project  based on a given main configuration."
+    description="Behavior mapping, many options (joint, disparate etc.) are available."
 )
 parser.add_argument(
     "--main-cfg-path",

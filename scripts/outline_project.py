@@ -61,7 +61,7 @@ if __name__ == "__main__":
         "log_scale": True,
         "normalize": True,
         "coefs_summary_method": "max",
-        "post_processing_winsize": FPS * 2,
+        "post_processing_winsize": FPS,
         "post_processing_wintype": "boxcar",
     }
     active_bouts_decision_tree_kwargs = {

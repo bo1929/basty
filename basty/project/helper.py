@@ -60,6 +60,19 @@ class ParameterHandler:
         self.norm = kwargs.pop("norm", "l1")
         assert self.norm in ["l1", "l2", "max"]
 
+    @staticmethod
+    def decision_tree_default_kwargs(**kwargs):
+        decision_tree_kwargs = {}
+        decision_tree_kwargs["n_estimators"] = kwargs.pop("n_estimators", 10)
+        decision_tree_kwargs["max_depth"] = kwargs.pop("max_depth", 5)
+        decision_tree_kwargs["min_samples_leaf"] = kwargs.pop(
+            "min_samples_leaf", 10 ** 3
+        )
+        decision_tree_kwargs["max_features"] = kwargs.pop("max_features", "sqrt")
+        decision_tree_kwargs["criterion"] = kwargs.pop("criterion", "gini")
+        decision_tree_kwargs["class_weight"] = kwargs.pop("class_weight", "balanced")
+        return decision_tree_kwargs
+
     def init_dormant_epochs_kwargs(self, fps, use_supervised_learning, **kwargs):
         self.datums = kwargs.pop("datums", [])
         self.datums_winsize = kwargs.pop("datums_winsize", fps * 1)
@@ -89,19 +102,6 @@ class ParameterHandler:
                 **kwargs
             )
 
-    @staticmethod
-    def decision_tree_default_kwargs(**kwargs):
-        decision_tree_kwargs = {}
-        decision_tree_kwargs["n_estimators"] = kwargs.pop("n_estimators", 10)
-        decision_tree_kwargs["max_depth"] = kwargs.pop("max_depth", 5)
-        decision_tree_kwargs["min_samples_leaf"] = kwargs.pop(
-            "min_samples_leaf", 10 ** 3
-        )
-        decision_tree_kwargs["max_features"] = kwargs.pop("max_features", "sqrt")
-        decision_tree_kwargs["criterion"] = kwargs.pop("criterion", "gini")
-        decision_tree_kwargs["class_weight"] = kwargs.pop("class_weight", "balanced")
-        return decision_tree_kwargs
-
     def init_active_bouts_kwargs(self, fps, use_supervised_learning, **kwargs):
         self.datums_list = kwargs.pop("datums_list", [[]])
         self.datums_winsize = kwargs.pop("datums_winsize", fps // 5)
@@ -109,7 +109,7 @@ class ParameterHandler:
         self.log_scale = kwargs.pop("log_scale", True)
         self.normalize = kwargs.pop("normalize", True)
 
-        self.post_processing_winsize = kwargs.pop("post_processing_winsize", fps * 2)
+        self.post_processing_winsize = kwargs.pop("post_processing_winsize", fps * 1)
         self.post_processing_wintype = kwargs.pop("post_processing_wintype", "boxcar")
         assert self.post_processing_winsize > 1
 

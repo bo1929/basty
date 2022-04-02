@@ -404,7 +404,7 @@ class ExptActiveBouts(Project):
                 )
             else:
                 thresholds = thresholds_expt_dict[name]
-                mask_active, active_mask_per_datums = ActiveBouts.compute_active_bouts(
+                mask_active = ActiveBouts.compute_active_bouts(
                     X,
                     thresholds,
                     winsize=self.post_processing_winsize,

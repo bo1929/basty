@@ -13,6 +13,20 @@ from basty.behavior_mapping.behavioral_windows import BehavioralWindows
 
 class OutlineMixin:
     @staticmethod
+    def process_short_cont_intvls(labels, marker_label, min_intvl):
+        intvls = misc.cont_intvls(labels.astype(int))
+        processed_labels = np.empty_like(labels)
+
+        for i in range(1, intvls.shape[0]):
+            lbl = labels[intvls[i - 1]]
+            intvl_start, intvl_end = intvls[i - 1], intvls[i]
+            if intvl_end - intvl_start < min_intvl and lbl == marker_label:
+                processed_labels[intvl_start:intvl_end] = -1
+            else:
+                processed_labels[intvl_start:intvl_end] = lbl
+        return processed_labels
+
+    @staticmethod
     def get_cont_intvsl_dict(labels):
         intvls = misc.cont_intvls(labels)
 
@@ -182,20 +196,23 @@ class ActiveBouts(OutlineThresholdGMM, OutlineRandomForestClassifier, SummaryCoe
     def compute_active_bouts(cls, X, thresholds, winsize=30, wintype="boxcar"):
         assert isinstance(X, np.ndarray) and X.ndim == 2
         assert len(thresholds) == X.shape[1]
+        assert winsize >= 4
 
-        mask_active = np.full(X.shape[0], False, dtype=np.bool_)
-        active_mask_per_datums = []
+        mask_init = np.full(X.shape[0], False, dtype=np.bool_)
 
         for i in range(X.shape[1]):
             values_per_datums = X[:, i]
-            mask_active_tmp = values_per_datums > thresholds[i]
-            active_mask_per_datums.append(mask_active_tmp)
-            mask_active = np.logical_or(mask_active, mask_active_tmp)
+            mask_init = np.logical_or(mask_init, values_per_datums > thresholds[i])
 
-        mask_active = cls.postprocess_outlines(
-            mask_active.astype(int), winsize=winsize, wintype=wintype
-        ).astype(bool)
-        return mask_active, active_mask_per_datums
+        initial_labels = mask_init.astype(int)
+        intermediate_labels = cls.postprocess_outlines(
+            initial_labels, winsize=winsize, wintype=wintype
+        )
+        final_labels = cls.process_short_cont_intvls(
+            intermediate_labels, 1, winsize // 2
+        )
+        mask_active = final_labels == 1
+        return mask_active
 
     def construct_active_bouts_decision_tree(
         self, X_train_list, y_train_list, **kwargs
@@ -205,30 +222,22 @@ class ActiveBouts(OutlineThresholdGMM, OutlineRandomForestClassifier, SummaryCoe
         )
 
     def predict_active_bouts(self, X, winsize=30, wintype="boxcar"):
-        final_labels = np.array(self.decision_tree.predict(X))
+        assert isinstance(X, np.ndarray) and X.ndim == 2
+        assert winsize >= 4
+
+        initial_labels = np.array(self.decision_tree.predict(X))
+        intermediate_labels = self.postprocess_outlines(
+            initial_labels, winsize=winsize, wintype=wintype
+        )
+        final_labels = self.__class__.process_short_cont_intvls(
+            intermediate_labels, 1, winsize // 2
+        )
         mask_active = final_labels == 1
-        mask_active = self.postprocess_outlines(
-            mask_active.astype(int), winsize=winsize, wintype=wintype
-        ).astype(bool)
         return mask_active
 
 
 class DormantEpochs(OutlineThresholdGMM, OutlineRandomForestClassifier):
     label_to_name = {0: "Dormant", 1: "Arouse", -1: "Betwixt"}
-
-    @staticmethod
-    def process_short_cont_intvls(labels, marker_label, min_intvl):
-        intvls = misc.cont_intvls(labels.astype(int))
-        processed_labels = np.empty_like(labels)
-
-        for i in range(1, intvls.shape[0]):
-            lbl = labels[intvls[i - 1]]
-            intvl_start, intvl_end = intvls[i - 1], intvls[i]
-            if intvl_end - intvl_start < min_intvl and lbl == marker_label:
-                processed_labels[intvl_start:intvl_end] = -1
-            else:
-                processed_labels[intvl_start:intvl_end] = lbl
-        return processed_labels
 
     @classmethod
     def compute_dormant_epochs(
@@ -279,6 +288,9 @@ class DormantEpochs(OutlineThresholdGMM, OutlineRandomForestClassifier):
         )
 
     def predict_dormant_epochs(self, X, min_dormant=900, winsize=90, wintype="boxcar"):
+        assert isinstance(X, np.ndarray) and X.ndim == 2
+        assert winsize >= 4
+
         initial_labels = np.array(self.decision_tree.predict(X))
         intermediate_labels = self.postprocess_outlines(
             initial_labels, winsize=winsize, wintype=wintype

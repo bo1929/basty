@@ -6,7 +6,7 @@ from basty.utils.io import read_config
 from basty.project.feature_extraction import FeatureExtraction
 
 parser = argparse.ArgumentParser(
-    description="Initialize project  based on a given main configuration."
+    description="Feature extraction, together with preprocessing steps."
 )
 parser.add_argument(
     "--main-cfg-path",
