@@ -8,53 +8,10 @@ from sklearn.ensemble import RandomForestClassifier
 
 import basty.utils.misc as misc
 
-from basty.behavior_mapping.behavioral_windows import BehavioralWindows
+from basty.utils.postprocessing import PostProcessing
 
 
-class OutlineMixin:
-    @staticmethod
-    def process_short_cont_intvls(labels, marker_label, min_intvl):
-        intvls = misc.cont_intvls(labels.astype(int))
-        processed_labels = np.empty_like(labels)
-
-        for i in range(1, intvls.shape[0]):
-            lbl = labels[intvls[i - 1]]
-            intvl_start, intvl_end = intvls[i - 1], intvls[i]
-            if intvl_end - intvl_start < min_intvl and lbl == marker_label:
-                processed_labels[intvl_start:intvl_end] = -1
-            else:
-                processed_labels[intvl_start:intvl_end] = lbl
-        return processed_labels
-
-    @staticmethod
-    def get_cont_intvsl_dict(labels):
-        intvls = misc.cont_intvls(labels)
-
-        cont_intvls_dict = defaultdict(list)
-
-        for i in range(1, intvls.shape[0]):
-            lbl = labels[intvls[i - 1]]
-            intvl_start, intvl_end = intvls[i - 1], intvls[i]
-            cont_intvls_dict[lbl].append((intvl_start, intvl_end))
-
-        return cont_intvls_dict
-
-    @staticmethod
-    def postprocess_outlines(labels, winsize, wintype="boxcar"):
-        if winsize > 1:
-            win_positive_counts = BehavioralWindows.get_behavior_counts(
-                labels,
-                wintype=wintype,
-                winsize=winsize,
-                stepsize=1,
-            )
-            labels_postprocessed = np.array(
-                [np.argmax(counts) for counts in (win_positive_counts)]
-            )
-        else:
-            labels_postprocessed = labels
-        return labels_postprocessed
-
+class OutlineMixin(PostProcessing):
     @staticmethod
     def get_datums_values(df_values, datums=[], winsize=3):
         assert isinstance(df_values, pd.DataFrame) and df_values.ndim == 2
@@ -205,7 +162,7 @@ class ActiveBouts(OutlineThresholdGMM, OutlineRandomForestClassifier, SummaryCoe
             mask_init = np.logical_or(mask_init, values_per_datums > thresholds[i])
 
         initial_labels = mask_init.astype(int)
-        intermediate_labels = cls.postprocess_outlines(
+        intermediate_labels = cls.compute_window_majority(
             initial_labels, winsize=winsize, wintype=wintype
         )
         final_labels = cls.process_short_cont_intvls(
@@ -226,7 +183,7 @@ class ActiveBouts(OutlineThresholdGMM, OutlineRandomForestClassifier, SummaryCoe
         assert winsize >= 4
 
         initial_labels = np.array(self.decision_tree.predict(X))
-        intermediate_labels = self.postprocess_outlines(
+        intermediate_labels = self.compute_window_majority(
             initial_labels, winsize=winsize, wintype=wintype
         )
         final_labels = self.__class__.process_short_cont_intvls(
@@ -292,7 +249,7 @@ class DormantEpochs(OutlineThresholdGMM, OutlineRandomForestClassifier):
         assert winsize >= 4
 
         initial_labels = np.array(self.decision_tree.predict(X))
-        intermediate_labels = self.postprocess_outlines(
+        intermediate_labels = self.compute_window_majority(
             initial_labels, winsize=winsize, wintype=wintype
         )
         final_labels = self.__class__.process_short_cont_intvls(

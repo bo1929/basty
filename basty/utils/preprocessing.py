@@ -57,7 +57,7 @@ def boxcar_center_filter(df_pose, winsize):
     return df_pose
 
 
-def median_filter(df_pose, winsize, remove_outliers=False):
+def median_filter(df_pose, winsize):
     for name in df_pose.columns:
         df_pose[name] = medfilt(df_pose[name].to_numpy(), size=winsize)
     return df_pose

@@ -432,6 +432,11 @@ class BehaviorClustering(BehaviorMixin):
                 assert self.is_compatible_approach(
                     expt_name1, embedding_name1, expt_name2, embedding_name2
                 )
+            for idx11, expt_name11 in enumerate(expt_names1[idx1 + 1 :]):
+                embedding_name11 = embedding_names1[idx11]
+                assert self.is_compatible_approach(
+                    expt_name1, embedding_name1, expt_name11, embedding_name11
+                )
 
         prev = 0
         pbar = tqdm(expt_names1)
@@ -860,6 +865,20 @@ class BehaviorCorrespondence(BehaviorMixin):
                 expt_path / "correspondences",
                 f"score_{clustering_name.replace('cluster', 'behavior')}.npy",
                 depth=3,
+            )
+
+    @misc.timeit
+    def disparately_compute_behavior_score_disparate_cluster_supervised_disparate(
+        self,
+    ):
+        annotated_expt_names = list(self.annotation_path_dict.keys())
+
+        for ann_expt_name in annotated_expt_names:
+            ann_embedding_name = "supervised_disparate_embedding"
+            ann_clustering_name = f"disparate_cluster_{ann_embedding_name}"
+            self.disparately_compute_behavior_score(
+                [ann_expt_name],
+                [ann_clustering_name],
             )
 
     @misc.timeit
