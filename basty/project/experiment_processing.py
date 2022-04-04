@@ -4,7 +4,7 @@ import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 from collections import defaultdict
-from sklearn.preprocessing import normalize
+from sklearn.preprocessing import scale, normalize
 
 import basty.utils.io as io
 import basty.utils.misc as misc
@@ -224,8 +224,11 @@ class ExptDormantEpochs(Project):
             X = DormantEpochs.get_datums_values(
                 delta_stft, datums=datums, winsize=self.datums_winsize
             ).reshape((-1, 1))
+
             if self.log_scale:
                 X = np.log2(X + 1)
+            if self.scale:
+                X = scale(X)
             if self.normalize:
                 X = normalize(X, norm="l1")
 
@@ -347,6 +350,9 @@ class ExptActiveBouts(Project):
             del df_coefs
 
             X = np.stack(values, axis=1)
+
+            if self.scale:
+                X = scale(X)
             if self.normalize:
                 X = normalize(X, norm="l1")
 

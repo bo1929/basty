@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import scipy.ndimage.filters as filters
 
-from collections import defaultdict
 from sklearn.mixture import GaussianMixture
 from sklearn.ensemble import RandomForestClassifier
 
@@ -28,7 +27,7 @@ class OutlineMixin(PostProcessing):
 
         X[np.isnan(X)] = np.inf
 
-        if winsize is not None:
+        if winsize > 1:
             X = filters.median_filter(X, winsize)
 
         return X
@@ -153,7 +152,6 @@ class ActiveBouts(OutlineThresholdGMM, OutlineRandomForestClassifier, SummaryCoe
     def compute_active_bouts(cls, X, thresholds, winsize=30, wintype="boxcar"):
         assert isinstance(X, np.ndarray) and X.ndim == 2
         assert len(thresholds) == X.shape[1]
-        assert winsize >= 4
 
         mask_init = np.full(X.shape[0], False, dtype=np.bool_)
 
@@ -180,7 +178,6 @@ class ActiveBouts(OutlineThresholdGMM, OutlineRandomForestClassifier, SummaryCoe
 
     def predict_active_bouts(self, X, winsize=30, wintype="boxcar"):
         assert isinstance(X, np.ndarray) and X.ndim == 2
-        assert winsize >= 4
 
         initial_labels = np.array(self.decision_tree.predict(X))
         intermediate_labels = self.compute_window_majority(
@@ -246,7 +243,6 @@ class DormantEpochs(OutlineThresholdGMM, OutlineRandomForestClassifier):
 
     def predict_dormant_epochs(self, X, min_dormant=900, winsize=90, wintype="boxcar"):
         assert isinstance(X, np.ndarray) and X.ndim == 2
-        assert winsize >= 4
 
         initial_labels = np.array(self.decision_tree.predict(X))
         intermediate_labels = self.compute_window_majority(

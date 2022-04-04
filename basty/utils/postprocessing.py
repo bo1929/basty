@@ -11,16 +11,19 @@ from basty.behavior_mapping.behavioral_windows import BehavioralWindows
 class PostProcessing:
     @staticmethod
     def process_short_cont_intvls(labels, marker_label, min_intvl):
-        intvls = misc.cont_intvls(labels.astype(int))
-        processed_labels = np.empty_like(labels)
+        if min_intvl > 1:
+            intvls = misc.cont_intvls(labels.astype(int))
+            processed_labels = np.empty_like(labels)
 
-        for i in range(1, intvls.shape[0]):
-            lbl = labels[intvls[i - 1]]
-            intvl_start, intvl_end = intvls[i - 1], intvls[i]
-            if intvl_end - intvl_start < min_intvl and lbl == marker_label:
-                processed_labels[intvl_start:intvl_end] = -1
-            else:
-                processed_labels[intvl_start:intvl_end] = lbl
+            for i in range(1, intvls.shape[0]):
+                lbl = labels[intvls[i - 1]]
+                intvl_start, intvl_end = intvls[i - 1], intvls[i]
+                if intvl_end - intvl_start < min_intvl and lbl == marker_label:
+                    processed_labels[intvl_start:intvl_end] = -1
+                else:
+                    processed_labels[intvl_start:intvl_end] = lbl
+        else:
+            processed_labels = labels
         return processed_labels
 
     @staticmethod
@@ -60,7 +63,7 @@ class PostProcessing:
         elif X.ndim == 1:
             X = ndimage.median_filter(X, size=winsize, **kwargs)
         else:
-            raise ValueError
+            raise ValueError("Number of dimensions have to be one or two.")
         return X
 
     @staticmethod
@@ -71,5 +74,5 @@ class PostProcessing:
         elif X.ndim == 1:
             X = ndimage.uniform_filter1d(X, size=winsize, **kwargs)
         else:
-            raise ValueError
+            raise ValueError("Number of dimensions have to be one or two.")
         return X

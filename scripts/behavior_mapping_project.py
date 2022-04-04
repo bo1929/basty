@@ -80,6 +80,10 @@ parser.add_argument(
     action=argparse.BooleanOptionalAction,
 )
 parser.add_argument(
+    "--disparately-compute-behavior-score-disparate-cluster-supervised-disparate",
+    action=argparse.BooleanOptionalAction,
+)
+parser.add_argument(
     "--map-disparate-cluster-supervised-joint",
     action=argparse.BooleanOptionalAction,
 )
@@ -141,7 +145,7 @@ if __name__ == "__main__":
     mapping_postprocessing_kwargs = {}
     behavior_correspondence_kwargs = {}
 
-    behavior_mapping = BehaviorMapping(
+    behavior_mapper = BehaviorMapping(
         args.main_cfg_path,
         **UMAP_kwargs,
         **HDBSCAN_kwargs,
@@ -151,60 +155,62 @@ if __name__ == "__main__":
 
     # Embedding related procedures.
     if args.compute_supervised_disparate_embeddings:
-        behavior_mapping.compute_supervised_disparate_embeddings()
+        behavior_mapper.compute_supervised_disparate_embeddings()
     if args.compute_supervised_joint_embeddings:
-        behavior_mapping.compute_supervised_joint_embeddings()
+        behavior_mapper.compute_supervised_joint_embeddings()
 
     if args.compute_unsupervised_disparate_embeddings:
-        behavior_mapping.compute_unsupervised_disparate_embeddings()
+        behavior_mapper.compute_unsupervised_disparate_embeddings()
     if args.compute_unsupervised_joint_embeddings:
-        behavior_mapping.compute_unsupervised_joint_embeddings()
+        behavior_mapper.compute_unsupervised_joint_embeddings()
 
     if args.compute_semisupervised_pair_embeddings:
-        behavior_mapping.compute_semisupervised_pair_embeddings()
+        behavior_mapper.compute_semisupervised_pair_embeddings()
 
     # Clustering related procedures.
     if args.jointly_cluster_supervised_joint:
-        behavior_mapping.jointly_cluster_supervised_joint()
+        behavior_mapper.jointly_cluster_supervised_joint()
     if args.jointly_cluster_unsupervised_joint:
-        behavior_mapping.jointly_cluster_unsupervised_joint()
+        behavior_mapper.jointly_cluster_unsupervised_joint()
     if args.jointly_cluster_semisupervised_pair:
-        behavior_mapping.jointly_cluster_semisupervised_pair()
+        behavior_mapper.jointly_cluster_semisupervised_pair()
 
     if args.disparately_cluster_supervised_joint:
-        behavior_mapping.disparately_cluster_supervised_joint()
+        behavior_mapper.disparately_cluster_supervised_joint()
     if args.disparately_cluster_unsupervised_joint:
-        behavior_mapping.disparately_cluster_unsupervised_joint()
+        behavior_mapper.disparately_cluster_unsupervised_joint()
     if args.disparately_cluster_supervised_disparate:
-        behavior_mapping.disparately_cluster_supervised_disparate()
+        behavior_mapper.disparately_cluster_supervised_disparate()
     if args.disparately_cluster_unsupervised_disparate:
-        behavior_mapping.disparately_cluster_unsupervised_disparate()
+        behavior_mapper.disparately_cluster_unsupervised_disparate()
     if args.disparately_cluster_semisupervised_pair:
-        behavior_mapping.disparately_cluster_semisupervised_pair()
+        behavior_mapper.disparately_cluster_semisupervised_pair()
 
     if args.crosswisely_cluster_semisupervised_pair:
-        behavior_mapping.crosswisely_cluster_semisupervised_pair()
+        behavior_mapper.crosswisely_cluster_semisupervised_pair()
 
     # Correspondence related procedures.
     if args.map_disparate_cluster_supervised_disparate:
-        behavior_mapping.map_disparate_cluster_supervised_disparate()
+        behavior_mapper.map_disparate_cluster_supervised_disparate()
+    if args.disparately_compute_behavior_score_disparate_cluster_supervised_disparate:
+        behavior_mapper.disparately_compute_behavior_score_disparate_cluster_supervised_disparate()
     if args.map_disparate_cluster_supervised_joint:
-        behavior_mapping.map_disparate_cluster_supervised_joint()
+        behavior_mapper.map_disparate_cluster_supervised_joint()
     if args.map_disparate_cluster_unsupervised_disparate:
-        behavior_mapping.map_disparate_cluster_unsupervised_disparate()
+        behavior_mapper.map_disparate_cluster_unsupervised_disparate()
     if args.map_disparate_cluster_unsupervised_joint:
-        behavior_mapping.map_disparate_cluster_unsupervised_joint()
+        behavior_mapper.map_disparate_cluster_unsupervised_joint()
     if args.map_disparate_cluster_semisupervised_pair:
-        behavior_mapping.map_disparate_cluster_semisupervised_pair()
+        behavior_mapper.map_disparate_cluster_semisupervised_pair()
 
     if args.map_joint_cluster_supervised_joint:
-        behavior_mapping.map_joint_cluster_supervised_joint()
+        behavior_mapper.map_joint_cluster_supervised_joint()
     if args.map_joint_cluster_unsupervised_joint:
-        behavior_mapping.map_joint_cluster_unsupervised_joint()
+        behavior_mapper.map_joint_cluster_unsupervised_joint()
     if args.map_joint_cluster_semisupervised_pair:
-        behavior_mapping.map_joint_cluster_semisupervised_pair()
+        behavior_mapper.map_joint_cluster_semisupervised_pair()
 
     if args.map_crosswise_cluster_semisupervised_pair:
-        behavior_mapping.map_crosswise_cluster_semisupervised_pair()
+        behavior_mapper.map_crosswise_cluster_semisupervised_pair()
     if args.crosswisely_compute_behavior_score_crosswise_cluster_semisupervised_pair:
-        behavior_mapping.crosswisely_compute_behavior_score_crosswise_cluster_semisupervised_pair()
+        behavior_mapper.crosswisely_compute_behavior_score_crosswise_cluster_semisupervised_pair()

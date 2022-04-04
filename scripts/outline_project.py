@@ -35,6 +35,7 @@ if __name__ == "__main__":
         "datums": [],
         "datums_winsize": FPS,
         "log_scale": False,
+        "scale": False,
         "normalize": False,
         "min_dormant": 300 * FPS,
         "num_gmm_comp": 2,
@@ -57,9 +58,10 @@ if __name__ == "__main__":
     supervised_active_bouts = True
     active_bouts_kwargs = {
         "datums_list": [[]],
-        "datums_winsize": FPS // 5,
+        "datums_winsize": 0,
         "log_scale": True,
-        "normalize": True,
+        "scale": True,
+        "normalize": False,
         "coefs_summary_method": "max",
         "post_processing_winsize": FPS,
         "post_processing_wintype": "boxcar",
