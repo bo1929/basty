@@ -156,7 +156,7 @@ class FeatureExtraction(Project):
 
                 group_indices = df_pose.groupby(level=0, as_index=True).indices
                 part_to_frame_count = {
-                    key: max(val) for key, val in group_indices.items()
+                    key: max(val) + 1 for key, val in group_indices.items()
                 }
 
                 expt_record.part_to_frame_count = part_to_frame_count

@@ -592,12 +592,25 @@ class BehaviorCorrespondence(BehaviorMixin):
 
             for idx2, ann_lbl in enumerate(y_ann_uniq_cluster):
                 ann_cluster_count = ann_uniq_cluster_counts[idx2]
+
                 tf = ann_cluster_count / cluster_uniq_counts[idx1]
                 # tf = 0.5 + 0.5 * (ann_cluster_count / max(ann_uniq_cluster_counts))
-                # tf = np.log2(1 + (ann_cluster_count/ cluster_uniq_counts[idx1]))
+                # tf = np.log2(ann_cluster_count / cluster_uniq_counts[idx1])
+                # tf = np.log2(1 + (ann_cluster_count / cluster_uniq_counts[idx1]))
+                # tf = np.log2(1 + ann_cluster_count)
+
                 denom = cluster_uniq_counts[idx1] / ann_counts_ref[ann_lbl]
-                # idf = len(y_cluster_uniq) / len(np.unique(y_cluster[y_ann == ann_lbl]))
-                # denom = np.log2(idf)
+                # y_cluster_masked = y_cluster[y_ann == ann_lbl]
+                # na_max = max(np.unique(y_cluster_masked, return_counts=True)[1])
+                # denom = na_max / ann_counts_ref[ann_lbl]
+                # nc = len(np.unique(y_cluster[y_ann == ann_lbl]))
+                # max_count_ann_lbl = y_ann_uniq_cluster[np.argmax(ann_uniq_cluster_counts)]
+                # nc_max = len(np.unique(y_cluster[y_ann == max_count_ann_lbl]))
+                # idf = np.log2(nc_max / nc)
+                # idf = np.log2(len(y_cluster_uniq) / (1 + nc)) + 1
+                # idf = np.log2(len(y_cluster_uniq) / nc)
+                # denom = idf
+
                 mapping_dictionary[cluster_lbl][ann_lbl] = float(tf * denom)
 
             # L1- normalization of mapping weights.

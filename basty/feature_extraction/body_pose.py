@@ -161,24 +161,24 @@ class BodyPose:
         return orientations
 
     def _window_count_orientation(self, orientations, left_llh, right_llh, winsize):
-        if winsize % 2 == 1:
-            winsize = winsize + 1
         likely_left = left_llh > right_llh
 
-        for idx, window in enumerate(sliding_window_view(likely_left, winsize)):
+        for idx, window in enumerate(sliding_window_view(likely_left, 2 * winsize + 1)):
             if idx in orientations["idx"]:
                 left_count = np.count_nonzero(window)
                 right_count = winsize - left_count
-                if left_count > winsize // 2:
+                if left_count > winsize:
                     orientations["left"].add(idx)
-                elif right_count > winsize // 2:
+                    orientations["idx"].remove(idx)
+                elif right_count > winsize:
                     orientations["right"].add(idx)
+                    orientations["idx"].remove(idx)
                 else:
                     pass
-                orientations["idx"].remove(idx)
 
         return orientations
 
+    def _nearest_time_point_orientation(self, orientations, left_llh, right_llh):
         for idx in list(orientations["idx"]):
             left_closest = (
                 min(orientations["left"], key=lambda x: abs(x - idx))
