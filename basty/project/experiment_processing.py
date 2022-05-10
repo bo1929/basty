@@ -418,6 +418,10 @@ class ExptActiveBouts(Project):
                 )
 
             expt_record.mask_active = mask_active
+            if expt_record.has_annotation:
+                expt_record.mask_active = np.logical_and(
+                    expt_record.mask_active, np.logical_not(expt_record.mask_noise)
+                )
             assert mask_active.any()
 
             dormant_and_active = np.logical_and(

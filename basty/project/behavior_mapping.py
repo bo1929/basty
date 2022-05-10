@@ -3,7 +3,7 @@ import numpy as np
 
 from tqdm import tqdm
 from collections import defaultdict
-from sklearn.preprocessing import normalize
+from sklearn.preprocessing import normalize, scale
 from hdbscan import (
     HDBSCAN,
     membership_vector,
@@ -50,9 +50,11 @@ class BehaviorEmbedding(BehaviorMixin):
     def __init__(
         self,
         main_cfg_path,
+        use_annotations_to_mask=False,
         **kwargs,
     ):
         BehaviorMixin.__init__(self, main_cfg_path, **kwargs)
+        self.use_annotations_to_mask = use_annotations_to_mask
         self.init_behavior_embeddings_kwargs(**kwargs)
 
     @misc.timeit
@@ -83,8 +85,11 @@ class BehaviorEmbedding(BehaviorMixin):
             X_expt, expt_record, _ = iterate_expt_for_embedding(expt_name)
             y_expt = np.zeros(X_expt.shape[0], dtype=int) - 1
 
+            if self.use_annotations_to_mask and expt_record.has_annotation:
+                mask_active = expt_record.mask_annotated
+            else:
+                mask_active = expt_record.mask_active
             mask_dormant = expt_record.mask_dormant
-            mask_active = expt_record.mask_active
 
             X_expt_dict[expt_name] = X_expt[mask_dormant & mask_active]
             y_expt_dict[expt_name] = y_expt[mask_dormant & mask_active]
@@ -96,12 +101,15 @@ class BehaviorEmbedding(BehaviorMixin):
             X_expt, expt_record, expt_path = iterate_expt_for_embedding(expt_name)
 
             assert expt_record.has_annotation
-            mask_annotated = expt_record.mask_annotated
+            if self.use_annotations_to_mask:
+                mask_active = expt_record.mask_annotated
+            else:
+                mask_active = expt_record.mask_active
             mask_dormant = expt_record.mask_dormant
             y_expt = self._load_numpy_array(expt_path, "annotations.npy")
 
-            X_expt_dict[expt_name] = X_expt[mask_dormant & mask_annotated]
-            y_expt_dict[expt_name] = y_expt[mask_dormant & mask_annotated]
+            X_expt_dict[expt_name] = X_expt[mask_dormant & mask_active]
+            y_expt_dict[expt_name] = y_expt[mask_dormant & mask_active]
 
             expt_indices_dict[expt_name] = (
                 prev,
@@ -593,10 +601,10 @@ class BehaviorCorrespondence(BehaviorMixin):
             for idx2, ann_lbl in enumerate(y_ann_uniq_cluster):
                 ann_cluster_count = ann_uniq_cluster_counts[idx2]
 
-                tf = ann_cluster_count / cluster_uniq_counts[idx1]
+                tf = ann_cluster_count / (cluster_uniq_counts[idx1] + 1)
                 # tf = 0.5 + 0.5 * (ann_cluster_count / max(ann_uniq_cluster_counts))
-                # tf = np.log2(ann_cluster_count / cluster_uniq_counts[idx1])
-                # tf = np.log2(1 + (ann_cluster_count / cluster_uniq_counts[idx1]))
+                # tf = np.log2(ann_cluster_count / (cluster_uniq_counts[idx1] + 1))
+                # tf = np.log2(1 + ann_cluster_count / (cluster_uniq_counts[idx1] + 1))
                 # tf = np.log2(1 + ann_cluster_count)
 
                 denom = cluster_uniq_counts[idx1] / ann_counts_ref[ann_lbl]
@@ -606,9 +614,8 @@ class BehaviorCorrespondence(BehaviorMixin):
                 # nc = len(np.unique(y_cluster[y_ann == ann_lbl]))
                 # max_count_ann_lbl = y_ann_uniq_cluster[np.argmax(ann_uniq_cluster_counts)]
                 # nc_max = len(np.unique(y_cluster[y_ann == max_count_ann_lbl]))
-                # idf = np.log2(nc_max / nc)
+                # idf = np.log2(nc_max / (nc + 1)) + 1
                 # idf = np.log2(len(y_cluster_uniq) / (1 + nc)) + 1
-                # idf = np.log2(len(y_cluster_uniq) / nc)
                 # denom = idf
 
                 mapping_dictionary[cluster_lbl][ann_lbl] = float(tf * denom)
@@ -789,6 +796,7 @@ class BehaviorCorrespondence(BehaviorMixin):
                         * cluster_membership.shape[1]
                     )
             behavior_score = normalize(behavior_score, norm="l1")
+            # sklearn.preprocessing.scale(behavior_score, axis=0)
 
             self._save_numpy_array(
                 behavior_score,
@@ -872,6 +880,7 @@ class BehaviorCorrespondence(BehaviorMixin):
                         behavior_score[:, behavior_lbl] + cluster_score
                     )
             behavior_score = normalize(behavior_score, norm="l1")
+            # sklearn.preprocessing.scale(behavior_score, axis=0)
 
             self._save_numpy_array(
                 behavior_score,
