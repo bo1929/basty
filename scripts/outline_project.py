@@ -59,7 +59,7 @@ if __name__ == "__main__":
         dormant_epochs = ExptDormantEpochs(args.main_cfg_path, **dormant_epochs_kwargs)
         dormant_epochs.outline_dormant_epochs()
 
-    supervised_active_bouts = True
+    supervised_active_bouts = False
     active_bouts_kwargs = {
         "datums_list": [[]],
         "datums_winsize": FPS // 10,

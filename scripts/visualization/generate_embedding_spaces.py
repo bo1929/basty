@@ -56,6 +56,17 @@ args.use_annotations_to_visualize = (
 )
 
 
+mask_suffix = "-DAnn" if args.use_annotations_to_mask else "-DA"
+exclude_frames = "-wAnnFrames" if args.exclude_unannotated_frames else ""
+color_suffix = "-wAnnColor" if args.use_annotations_to_color else ""
+opacity_suffix = "-wAnnOpacity" if args.change_opacity_wrt_cardinality else ""
+size_suffix = "-wAnnSize" if args.change_size_wrt_cardinality else ""
+
+name_suffix = (
+    f"{mask_suffix}{exclude_frames}{color_suffix}{opacity_suffix}{size_suffix}"
+)
+
+
 def plot_embedding(
     expt_name,
     expt_record,
@@ -153,6 +164,8 @@ def plot_embedding(
 
 
 def mask_and_get_values(X, annotations, expt_record):
+    y = None
+    y_col_name = None
     if args.use_annotations_to_mask:
         maskDAnn = np.logical_and(expt_record.mask_annotated, expt_record.mask_dormant)
         annotationsDAnn = annotations[maskDAnn]
@@ -191,7 +204,7 @@ def generate_supervised_disparate(project_obj):
             str(
                 expt_path
                 / "figures"
-                / f"{expt_name}_supervised-disparate-embedding.{args.extension}"
+                / f"{expt_name}_supervised-disparate-embedding{name_suffix}.{args.extension}"
             ),
         )
         print(expt_name)
@@ -220,7 +233,7 @@ def generate_unsupervised_disparate(project_obj):
             str(
                 expt_path
                 / "figures"
-                / f"{expt_name}_unsupervised-disparate-embedding.{args.extension}"
+                / f"{expt_name}_unsupervised-disparate-embedding{name_suffix}.{args.extension}"
             ),
         )
         print(expt_name)

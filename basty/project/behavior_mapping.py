@@ -77,6 +77,10 @@ class BehaviorEmbedding(BehaviorMixin):
             X_expt, expt_record, _ = iterate_expt_for_embedding(expt_name)
             y_expt = np.zeros(X_expt.shape[0], dtype=int) - 1
 
+            # This is for easy experimentation by only changing main configuration.
+            expt_record.has_annotation = expt_name in list(
+                self.annotation_path_dict.keys()
+            )  #  TODO: Should be removed.
             if self.use_annotations_to_mask and expt_record.has_annotation:
                 mask_active = expt_record.mask_annotated
             else:
