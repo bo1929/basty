@@ -2,6 +2,8 @@ import argparse
 
 from basty.project.behavior_mapping import BehaviorMapping
 
+from utils import log_params
+
 parser = argparse.ArgumentParser(
     description="Behavior mapping, many options (joint, disparate etc.) are available."
 )
@@ -124,15 +126,19 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-
 if __name__ == "__main__":
     UMAP_kwargs = {}
-    UMAP_kwargs["n_neighbors"] = 90
-    UMAP_kwargs["min_dist"] = 0.0
-    UMAP_kwargs["spread"] = 1.0
-    UMAP_kwargs["n_components"] = 2
-    UMAP_kwargs["metric"] = "hellinger"
-    UMAP_kwargs["low_memory"] = True
+    UMAP_kwargs["embedding_n_neighbors"] = 75
+    UMAP_kwargs["embedding_min_dist"] = 0.0
+    UMAP_kwargs["embedding_spread"] = 1.0
+    UMAP_kwargs["embedding_n_components"] = 2
+    UMAP_kwargs["embedding_metric"] = "hellinger"
+    UMAP_kwargs["embedding_low_memory"] = True
+    use_annotations_to_mask = False
+    embedding_kwargs = {
+        **UMAP_kwargs,
+        "use_annotations_to_mask": use_annotations_to_mask,
+    }
 
     HDBSCAN_kwargs = {}
     HDBSCAN_kwargs["prediction_data"] = True
@@ -140,15 +146,25 @@ if __name__ == "__main__":
     HDBSCAN_kwargs["cluster_selection_method"] = "eom"
     HDBSCAN_kwargs["cluster_selection_epsilon"] = 0.0
     HDBSCAN_kwargs["min_cluster_size"] = 500
-    HDBSCAN_kwargs["min_samples"] = 5
+    HDBSCAN_kwargs["min_cluster_samples"] = 5
+    clustering_kwargs = {**HDBSCAN_kwargs}
 
     mapping_postprocessing_kwargs = {}
     behavior_correspondence_kwargs = {}
 
+    log_params(args.main_cfg_path, "embedding", embedding_kwargs)
+    log_params(args.main_cfg_path, "clustering", clustering_kwargs)
+    log_params(
+        args.main_cfg_path, "behavior_correspondence", behavior_correspondence_kwargs
+    )
+    log_params(
+        args.main_cfg_path, "mapping_postprocessing", mapping_postprocessing_kwargs
+    )
+
     behavior_mapper = BehaviorMapping(
         args.main_cfg_path,
-        **UMAP_kwargs,
-        **HDBSCAN_kwargs,
+        **embedding_kwargs,
+        **clustering_kwargs,
         **behavior_correspondence_kwargs,
         **mapping_postprocessing_kwargs
     )

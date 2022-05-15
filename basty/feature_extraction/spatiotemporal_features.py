@@ -1,14 +1,13 @@
-import math
 import itertools
 import logging
-import numpy as np
-import pandas as pd
-
-from scipy.ndimage.filters import uniform_filter1d
+import math
 from copy import deepcopy
 
-import basty.utils.misc as misc
+import numpy as np
+import pandas as pd
+from scipy.ndimage.filters import uniform_filter1d
 
+import basty.utils.misc as misc
 
 np.seterr(all="ignore")
 

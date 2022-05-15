@@ -1,8 +1,8 @@
+from collections import defaultdict
+
 import numpy as np
 import sklearn.metrics as metrics
-
 from sklearn.neighbors import NearestNeighbors
-from collections import defaultdict
 
 import basty.utils.misc as misc
 

@@ -1,8 +1,8 @@
-import yaml
-import pickle
 import logging
-
+import pickle
 from pathlib import Path
+
+import yaml
 
 import basty.utils.misc as misc
 

@@ -1,9 +1,9 @@
-import math
-import pywt
 import logging
-import numpy as np
-
+import math
 from copy import deepcopy
+
+import numpy as np
+import pywt
 
 
 class WaveletTransformation:

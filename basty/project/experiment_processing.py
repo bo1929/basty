@@ -1,22 +1,19 @@
 import warnings
-import numpy as np
-
-from tqdm import tqdm
-from pathlib import Path
 from collections import defaultdict
-from sklearn.preprocessing import scale, normalize
+from pathlib import Path
+
+import numpy as np
+from sklearn.preprocessing import normalize, scale
+from tqdm import tqdm
 
 import basty.utils.io as io
 import basty.utils.misc as misc
-
-from basty.utils.annotations import HumanAnnotations as HumAnn
-from basty.project.helper import SavingHelper, LoadingHelper, ParameterHandler, Logger
 from basty.experiment_processing.experiment_info import ExptRecord
-from basty.experiment_processing.experiment_outline import (
-    DormantEpochs,
-    ActiveBouts,
-)
-
+from basty.experiment_processing.experiment_outline import (ActiveBouts,
+                                                            DormantEpochs)
+from basty.project.helper import (LoadingHelper, Logger, ParameterHandler,
+                                  SavingHelper)
+from basty.utils.annotations import HumanAnnotations as HumAnn
 
 warnings.filterwarnings("ignore")
 

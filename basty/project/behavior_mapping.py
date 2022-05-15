@@ -1,20 +1,14 @@
-import umap
-import numpy as np
-
-from tqdm import tqdm
 from collections import defaultdict
+
+import numpy as np
+import umap
+from hdbscan import HDBSCAN  # approximate_predict,
+from hdbscan import all_points_membership_vectors, membership_vector
 from sklearn.preprocessing import normalize, scale
-from hdbscan import (
-    HDBSCAN,
-    membership_vector,
-    all_points_membership_vectors,
-    # approximate_predict,
-)
+from tqdm import tqdm
 
 import basty.utils.misc as misc
-
 from basty.project.experiment_processing import Project
-
 
 EPS = 10 ** (-5)
 
@@ -50,11 +44,9 @@ class BehaviorEmbedding(BehaviorMixin):
     def __init__(
         self,
         main_cfg_path,
-        use_annotations_to_mask=False,
         **kwargs,
     ):
         BehaviorMixin.__init__(self, main_cfg_path, **kwargs)
-        self.use_annotations_to_mask = use_annotations_to_mask
         self.init_behavior_embeddings_kwargs(**kwargs)
 
     @misc.timeit
@@ -795,8 +787,8 @@ class BehaviorCorrespondence(BehaviorMixin):
                         * weight
                         * cluster_membership.shape[1]
                     )
+            # behavior_score = scale(behavior_score, axis=0)
             behavior_score = normalize(behavior_score, norm="l1")
-            # sklearn.preprocessing.scale(behavior_score, axis=0)
 
             self._save_numpy_array(
                 behavior_score,
@@ -879,8 +871,8 @@ class BehaviorCorrespondence(BehaviorMixin):
                     behavior_score[:, behavior_lbl] = (
                         behavior_score[:, behavior_lbl] + cluster_score
                     )
+            # behavior_score = scale(behavior_score, axis=0)
             behavior_score = normalize(behavior_score, norm="l1")
-            # sklearn.preprocessing.scale(behavior_score, axis=0)
 
             self._save_numpy_array(
                 behavior_score,

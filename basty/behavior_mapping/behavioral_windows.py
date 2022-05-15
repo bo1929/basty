@@ -1,10 +1,9 @@
 import logging
-import numpy as np
 
-from sklearn.feature_extraction.text import TfidfTransformer
-from sklearn.preprocessing import MultiLabelBinarizer
+import numpy as np
 from scipy.signal.windows import get_window
-from sklearn.preprocessing import normalize
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.preprocessing import MultiLabelBinarizer, normalize
 
 import basty.utils.misc as misc
 

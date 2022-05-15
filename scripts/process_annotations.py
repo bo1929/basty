@@ -1,5 +1,6 @@
 import argparse
 import pathlib
+
 import pandas as pd
 
 LABEL_INACTIVE = "Idle"

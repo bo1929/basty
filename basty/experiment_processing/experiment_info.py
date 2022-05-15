@@ -1,7 +1,7 @@
+from collections import defaultdict
+
 import numpy as np
 import pandas as pd
-
-from collections import defaultdict
 
 import basty.utils.misc as misc
 
@@ -171,7 +171,7 @@ class ExptInfo:
     @property
     def snapft_to_ftname(self):
         if self._snapft_to_ftname is None:
-            raise ValueError("'behavior_to_label' is not set.")
+            raise ValueError("'snapft_to_ftname' is not set.")
         return self._snapft_to_ftname
 
     @property
@@ -183,7 +183,7 @@ class ExptInfo:
     @property
     def deltaft_to_ftname(self):
         if self._deltaft_to_ftname is None:
-            raise ValueError("'behavior_to_label' is not set.")
+            raise ValueError("'deltaft_to_ftname' is not set.")
         return self._deltaft_to_ftname
 
     @snapft_to_ftname.setter

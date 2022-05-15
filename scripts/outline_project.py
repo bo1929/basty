@@ -1,6 +1,8 @@
 import argparse
 
-from basty.project.experiment_processing import ExptDormantEpochs, ExptActiveBouts
+from basty.project.experiment_processing import ExptActiveBouts, ExptDormantEpochs
+
+from utils import log_params
 
 parser = argparse.ArgumentParser(
     description="Outlining project to compute dormant epochs and active bouts."
@@ -46,25 +48,31 @@ if __name__ == "__main__":
         "tol_percent": 0.4,
     }
     dormant_epochs_decision_tree_kwargs = {}
+    dormant_epochs_kwargs = {
+        "use_supervised_learning": supervised_dormant_epochs,
+        **dormant_epochs_kwargs,
+        **dormant_epochs_decision_tree_kwargs,
+    }
+    log_params(args.main_cfg_path, "dormant_epochs", dormant_epochs_kwargs)
 
     if args.outline_dormant_epochs or args.outline_all:
-        dormant_epochs = ExptDormantEpochs(
-            args.main_cfg_path,
-            use_supervised_learning=supervised_dormant_epochs,
-            **{**dormant_epochs_kwargs, **dormant_epochs_decision_tree_kwargs}
-        )
+        dormant_epochs = ExptDormantEpochs(args.main_cfg_path, **dormant_epochs_kwargs)
         dormant_epochs.outline_dormant_epochs()
 
     supervised_active_bouts = True
     active_bouts_kwargs = {
         "datums_list": [[]],
-        "datums_winsize": 0,
+        "datums_winsize": FPS // 10,
+        "scale": False,
         "log_scale": True,
-        "scale": True,
         "normalize": False,
         "coefs_summary_method": "max",
         "post_processing_winsize": FPS,
         "post_processing_wintype": "boxcar",
+        "num_gmm_comp": 3,
+        "threshold_key": "local_min",
+        # Indices start from 0.
+        "threshold_idx": 1,
     }
     active_bouts_decision_tree_kwargs = {
         "n_estimators": 5,
@@ -74,11 +82,13 @@ if __name__ == "__main__":
         "criterion": "gini",
         "class_weight": "balanced",
     }
+    active_bouts_kwargs = {
+        "use_supervised_learning": supervised_active_bouts,
+        **active_bouts_decision_tree_kwargs,
+        **active_bouts_kwargs,
+    }
+    log_params(args.main_cfg_path, "active_bouts", active_bouts_kwargs)
 
     if args.outline_active_bouts or args.outline_all:
-        active_bouts = ExptActiveBouts(
-            args.main_cfg_path,
-            use_supervised_learning=supervised_active_bouts,
-            **{**active_bouts_decision_tree_kwargs, **active_bouts_kwargs}
-        )
+        active_bouts = ExptActiveBouts(args.main_cfg_path, **active_bouts_kwargs)
         active_bouts.outline_active_bouts()

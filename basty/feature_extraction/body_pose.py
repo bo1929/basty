@@ -1,12 +1,12 @@
-import random
 import logging
+import random
+
 import numpy as np
 import pandas as pd
+from numpy.lib.stride_tricks import sliding_window_view
+from scipy.ndimage.filters import uniform_filter1d
 
 import basty.utils.misc as misc
-
-from scipy.ndimage.filters import uniform_filter1d
-from numpy.lib.stride_tricks import sliding_window_view
 
 
 class BodyPose:

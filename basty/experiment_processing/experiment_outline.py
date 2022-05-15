@@ -1,12 +1,10 @@
 import numpy as np
 import pandas as pd
 import scipy.ndimage.filters as filters
-
-from sklearn.mixture import GaussianMixture
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.mixture import GaussianMixture
 
 import basty.utils.misc as misc
-
 from basty.utils.postprocessing import PostProcessing
 
 

@@ -1,9 +1,10 @@
-import sys
 import logging
-import tqdm
+import sys
+
 import joblib
 import numpy as np
 import pandas as pd
+import tqdm
 
 import basty.utils.io as io
 
@@ -126,17 +127,20 @@ class ParameterHandler:
 
     def init_behavior_embeddings_kwargs(self, **kwargs):
         self.UMAP_kwargs = {}
-        self.UMAP_kwargs["n_neighbors"] = kwargs.pop("embedding_n_negihbors", 90)
+        self.UMAP_kwargs["n_neighbors"] = kwargs.pop("embedding_n_neighbors", 90)
         self.UMAP_kwargs["min_dist"] = kwargs.pop("embedding_min_dist", 0.0)
         self.UMAP_kwargs["spread"] = kwargs.pop("embedding_spread", 1.0)
         self.UMAP_kwargs["n_components"] = kwargs.pop("embedding_n_components", 2)
         self.UMAP_kwargs["metric"] = kwargs.pop("embedding_metric", "hellinger")
         self.UMAP_kwargs["low_memory"] = kwargs.pop("embedding_low_memory", True)
+        self.use_annotations_to_mask = kwargs.pop("use_annotations_to_mask", False)
 
     def init_behavior_clustering_kwargs(self, **kwargs):
         self.HDBSCAN_kwargs = {}
-        self.HDBSCAN_kwargs["prediction_data"] = True
-        self.HDBSCAN_kwargs["approx_min_span_tree"] = True
+        self.HDBSCAN_kwargs["prediction_data"] = kwargs.pop("prediction_data", True)
+        self.HDBSCAN_kwargs["approx_min_span_tree"] = kwargs.pop(
+            "approx_min_span_tree", True
+        )
         self.HDBSCAN_kwargs["cluster_selection_method"] = kwargs.pop(
             "cluster_selection_method", "eom"
         )

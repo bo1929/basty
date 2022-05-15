@@ -1,9 +1,8 @@
 import argparse
 
-from pathlib import Path
-
-from basty.utils.io import read_config
 from basty.project.feature_extraction import FeatureExtraction
+
+from utils import backup_old_project, log_params
 
 parser = argparse.ArgumentParser(
     description="Feature extraction, together with preprocessing steps."
@@ -48,17 +47,6 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-def backup_old_project(main_cfg_path):
-    main_cfg = read_config(main_cfg_path)
-    project_path = main_cfg.get("project_path")
-    old_proj_dir = Path(project_path)
-    if old_proj_dir.exists():
-        suffix = 1
-        while old_proj_dir.with_suffix(f".{str(suffix)}").exists():
-            suffix += 1
-        old_proj_dir.replace(old_proj_dir.with_suffix(f".{str(suffix)}"))
-
-
 if __name__ == "__main__":
     """
     Add suffix or increment NUM to the project created by previous tests.
@@ -79,7 +67,7 @@ if __name__ == "__main__":
         "decreasing_llh_lower_z": -4.5,
         "low_llh_threshold": 0.075,
         "median_filter_winsize": 6,
-        "boxcar_filter_winsize": 4,
+        "boxcar_filter_winsize": 6,
         "jump_quantile": 0,
         "interpolation_method": "linear",
         "interpolation_kwargs": {},
@@ -90,10 +78,19 @@ if __name__ == "__main__":
     ft_ext = FeatureExtraction(
         args.main_cfg_path, **behavioral_reprs_kwargs, **pose_prep_kwargs
     )
+    stft_kwargs = {
+        "extract_delta": extract_delta,
+        "extract_snap": extract_snap,
+    }
+
+    log_params(args.main_cfg_path, "pose_prep", pose_prep_kwargs)
+    log_params(args.main_cfg_path, "behavioral_reprs", behavioral_reprs_kwargs)
+    log_params(args.main_cfg_path, "stft", stft_kwargs)
+
     if args.compute_pose_values or args.compute_all:
         ft_ext.compute_pose_values()
     if args.compute_spatiotemporal_features or args.compute_all:
-        ft_ext.compute_spatiotemporal_features(delta=extract_delta, snap=extract_snap)
+        ft_ext.compute_spatiotemporal_features(**stft_kwargs)
     if args.compute_postural_dynamics or args.compute_all:
         ft_ext.compute_postural_dynamics()
     if args.compute_behavioral_representations or args.compute_all:

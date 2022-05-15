@@ -1,12 +1,12 @@
 import logging
+
 import numpy as np
 import pandas as pd
 import scipy.signal as signal
-
-from scipy.stats import zscore
-from scipy.ndimage import median_filter as medfilt
 from filterpy.kalman import KalmanFilter
 from scipy.interpolate import splev, splrep
+from scipy.ndimage import median_filter as medfilt
+from scipy.stats import zscore
 
 # This functions are only for coordinate values.
 # Methods should be applied to pose dataframe directly.

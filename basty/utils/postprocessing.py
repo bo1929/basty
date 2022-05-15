@@ -1,10 +1,9 @@
+from collections import defaultdict
+
 import numpy as np
 import scipy.ndimage as ndimage
 
-from collections import defaultdict
-
 import basty.utils.misc as misc
-
 from basty.behavior_mapping.behavioral_windows import BehavioralWindows
 
 

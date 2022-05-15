@@ -1,17 +1,17 @@
+from collections import defaultdict
+
 import numpy as np
 import pandas as pd
-
-from tqdm import tqdm
-from collections import defaultdict
 from sklearn.preprocessing import Normalizer
+from tqdm import tqdm
 
-import basty.utils.preprocessing as prep
 import basty.utils.misc as misc
-
-from basty.project.experiment_processing import Project
+import basty.utils.preprocessing as prep
 from basty.feature_extraction.body_pose import BodyPose
 from basty.feature_extraction.spatiotemporal_features import SpatioTemporal
-from basty.feature_extraction.wavelet_transformation import WaveletTransformation
+from basty.feature_extraction.wavelet_transformation import \
+    WaveletTransformation
+from basty.project.experiment_processing import Project
 
 
 class FeatureExtraction(Project):

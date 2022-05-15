@@ -1,10 +1,10 @@
-import time
 import itertools
-import textwrap
 import logging
-import numpy as np
-
+import textwrap
+import time
 from collections import Counter
+
+import numpy as np
 
 
 def list_cartesian_product(*args):
