@@ -1,8 +1,9 @@
 import argparse
 
-from basty.project.experiment_processing import ExptActiveBouts, ExptDormantEpochs
-
 from utils import log_params
+
+from basty.project.experiment_processing import (ExptActiveBouts,
+                                                 ExptDormantEpochs)
 
 parser = argparse.ArgumentParser(
     description="Outlining project to compute dormant epochs and active bouts."

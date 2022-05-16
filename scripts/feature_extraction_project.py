@@ -1,8 +1,8 @@
 import argparse
 
-from basty.project.feature_extraction import FeatureExtraction
-
 from utils import backup_old_project, log_params
+
+from basty.project.feature_extraction import FeatureExtraction
 
 parser = argparse.ArgumentParser(
     description="Feature extraction, together with preprocessing steps."

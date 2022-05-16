@@ -81,17 +81,15 @@ class AnnotationInfo:
     def label_to_behavior(self, value):
         if not isinstance(value, dict):
             raise ValueError("'label_to_behavior' must have type 'dict'.")
-        if self._behavior_to_label is not None:
-            assert misc.reverse_dict(self._behavior_to_label) == value
         self._label_to_behavior = misc.sort_dict(value)
+        self._behavior_to_label = misc.reverse_dict(self._label_to_behavior)
 
     @behavior_to_label.setter
     def behavior_to_label(self, value):
         if not isinstance(value, dict):
             raise ValueError("'behavior_to_label' must have type 'dict'.")
-        if self._label_to_behavior is not None:
-            assert misc.reverse_dict(self._label_to_behavior) == value
         self._behavior_to_label = misc.sort_dict(value)
+        self._label_to_behavior = misc.reverse_dict(self._behavior_to_label)
 
 
 class ExptInfo:

@@ -1,8 +1,8 @@
 import argparse
 
-from basty.project.behavior_mapping import BehaviorMapping
-
 from utils import log_params
+
+from basty.project.behavior_mapping import BehaviorMapping
 
 parser = argparse.ArgumentParser(
     description="Behavior mapping, many options (joint, disparate etc.) are available."

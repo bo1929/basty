@@ -35,7 +35,7 @@ class StyleEmbedding:
                     "labelOpacity": 1,
                     "symbolOpacity": 1,
                 },
-                "title": {"anchor": "start", "color": "gray", "fontSize": 26},
+                "title": {"anchor": "start", "color": "gray", "fontSize": 25},
             }
         }
 
@@ -62,6 +62,6 @@ class StyleEthogram:
                     "titleFontSize": 24,
                     "titleLimit": MAX_LIMIT,
                 },
-                "title": {"anchor": "start", "color": "gray", "fontSize": 28},
+                "title": {"anchor": "start", "color": "gray", "fontSize": 25},
             }
         }

@@ -1,13 +1,14 @@
 import argparse
 
 import altair as alt
-import basty.project.experiment_processing as experiment_processing
-import basty.utils.misc as misc
 import joblib as jl
 import numpy as np
 import pandas as pd
 from altair_saver import save
 from style import StyleEthogram
+
+import basty.project.experiment_processing as experiment_processing
+import basty.utils.misc as misc
 
 parser = argparse.ArgumentParser(
     description="Generate ethograms given categorical labels such as annotations and predictions."
