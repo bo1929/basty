@@ -5,6 +5,9 @@ import time
 from collections import Counter
 
 import numpy as np
+import subprocess
+import os
+import pandas as pd
 
 
 def list_cartesian_product(*args):
@@ -28,6 +31,35 @@ def sort_dict(x):
         # Sorts dictionary by key.
         return dict(sorted(x.items()))
     return x
+
+def split_video_by_annotation(idxpath, vidname):
+    ''' Takes in a file containing list of indices and a video file, returns smaller videos corresponding to the list.
+    Parameters
+    ----------
+    idxpath
+    vidname
+
+    Returns
+    -------
+
+    '''
+    df = pd.read_csv(idxpath)
+    bout = 0
+    fps = 30
+    targetfolder = os.path.join(os.path.dirname(idxpath), 'SplitVids')
+    os.mkdir(targetfolder)
+
+    for start, finish, behavior in zip(df.Start, df.Finish, df.Behavior):
+        idx1 = start / fps
+        idx2 = finish / fps
+        tempname = behavior + '_' + str(bout) + '_' + str(start) + '_' + str(finish)
+        outputname = os.path.join(targetfolder, tempname + '.avi')
+        bout += 1
+        command = (
+            f"ffmpeg -n -i {vidname} -ss {idx1} -to {idx2} "
+            f"-c:v copy {outputname}"
+        )
+        subprocess.call(command, shell=True)
 
 
 def convert_hour_to_HM(hour):
