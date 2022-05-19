@@ -3,7 +3,7 @@ import pathlib
 
 import pandas as pd
 
-LABEL_INACTIVE = "Idle"
+LABEL_INACTIVE = "Idle&Other"
 
 parser = argparse.ArgumentParser(prog="PROG")
 parser.add_argument(

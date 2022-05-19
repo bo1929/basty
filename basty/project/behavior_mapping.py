@@ -83,8 +83,10 @@ class BehaviorEmbedding(BehaviorMixin):
             )  #  TODO: Should be removed.
             if self.use_annotations_to_mask and expt_record.has_annotation:
                 mask_active = expt_record.mask_annotated
+                expt_record.use_annotations_to_mask = True
             else:
                 mask_active = expt_record.mask_active
+                expt_record.use_annotations_to_mask = False
             mask_dormant = expt_record.mask_dormant
 
             X_expt_dict[expt_name] = X_expt[mask_dormant & mask_active]

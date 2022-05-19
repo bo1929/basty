@@ -10,7 +10,7 @@ class HumanAnnotations:
     def __init__(
         self,
         ann_path=None,
-        inactive_annotation="Idle",
+        inactive_annotation="Idle&Other",
         noise_annotation="Noise",
         arouse_annotation="Moving",
     ):

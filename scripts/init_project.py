@@ -30,7 +30,7 @@ if __name__ == "__main__":
         backup_old_project(args.main_cfg_path)
     init_kwargs = dict(
         annotation_priority=[],
-        inactive_annotation="Idle",
+        inactive_annotation="Idle&Other",
         noise_annotation="Noise",
         arouse_annotation="Moving",
     )

@@ -35,7 +35,7 @@ parser.add_argument(
     action=argparse.BooleanOptionalAction,
 )
 parser.add_argument(
-    "--use-annotations-to-color",
+    "--generate-joint-charts",
     action=argparse.BooleanOptionalAction,
 )
 parser.add_argument(
@@ -47,15 +47,11 @@ parser.add_argument(
     action=argparse.BooleanOptionalAction,
 )
 parser.add_argument(
+    "--use-annotations-to-color",
+    action=argparse.BooleanOptionalAction,
+)
+parser.add_argument(
     "--exclude-unannotated-frames",
-    action=argparse.BooleanOptionalAction,
-)
-parser.add_argument(
-    "--use-annotations-to-mask",
-    action=argparse.BooleanOptionalAction,
-)
-parser.add_argument(
-    "--generate-joint-charts",
     action=argparse.BooleanOptionalAction,
 )
 args = parser.parse_args()
@@ -65,16 +61,51 @@ args.use_annotations_to_visualize = (
     or args.change_opacity_wrt_cardinality
 )
 
+# There is only a single fly in the behavioral space, so this is not possible.
 if args.generate_supervised_disparate or args.generate_unsupervised_disparate:
     args.generate_joint_charts = False
 
 name_suffix = ""
-name_suffix += "-DAnn" if args.use_annotations_to_mask else "-DA"
 name_suffix += "-wAnnFrames" if args.exclude_unannotated_frames else ""
 name_suffix += "-wAnnColor" if args.use_annotations_to_color else ""
 name_suffix += "-wAnnOpacity" if args.change_opacity_wrt_cardinality else ""
 name_suffix += "-wAnnSize" if args.change_size_wrt_cardinality else ""
 name_suffix += "-JointChart" if args.generate_joint_charts else ""
+
+
+def get_mask_suffix(expt_record):
+    return "-DAnn" if expt_record.use_annotations_to_mask else "-DA"
+
+
+def mask_and_get_labels(X, expt_path, expt_record):
+    y = None
+    y_col_name = None
+    if expt_record.has_annotation:
+        annotations = np.load(expt_path / "annotations.npy")
+        if expt_record.use_annotations_to_mask:
+            maskDAnn = np.logical_and(
+                expt_record.mask_annotated, expt_record.mask_dormant
+            )
+            annotationsDAnn = annotations[maskDAnn]
+            y_ann = annotationsDAnn
+        else:
+            maskDA = np.logical_and(expt_record.mask_active, expt_record.mask_dormant)
+            annotationsDA = annotations[maskDA]
+            y_ann = annotationsDA
+            if args.exclude_unannotated_frames:
+                X = X[annotationsDA != 0, :]
+                y_ann = y_ann[annotationsDA != 0]
+        if args.use_annotations_to_visualize:
+            y = [expt_record.label_to_behavior[lbl] for lbl in y_ann]
+            y_col_name = "Behavior Annotation"
+    else:
+        if args.use_annotations_to_visualize:
+            y = ["Unannotated" for _ in y_ann]
+            y_col_name = "Behavior Annotation"
+            expt_record.has_annotation = True
+            expt_record.label_to_behavior[-1] = "Unannotated"
+
+    return X, y, y_col_name, expt_record
 
 
 def plot_embedding(
@@ -170,26 +201,6 @@ def plot_embedding(
     return chart_embedding
 
 
-def mask_and_get_values(X, annotations, expt_record):
-    y = None
-    y_col_name = None
-    if args.use_annotations_to_mask:
-        maskDAnn = np.logical_and(expt_record.mask_annotated, expt_record.mask_dormant)
-        annotationsDAnn = annotations[maskDAnn]
-        y_lbl = annotationsDAnn
-    else:
-        maskDA = np.logical_and(expt_record.mask_active, expt_record.mask_dormant)
-        annotationsDA = annotations[maskDA]
-        if args.exclude_unannotated_frames:
-            X = X[annotationsDA != 0, :]
-            annotationsDA = annotationsDA[annotationsDA != 0]
-        y_lbl = annotationsDA
-    if args.use_annotations_to_visualize:
-        y = [expt_record.label_to_behavior[lbl] for lbl in y_lbl]
-        y_col_name = "Behavior Annotation"
-    return X, y, y_col_name
-
-
 def generate_semisupervised_pair(project_obj):
     alt.themes.register("embedding_style", StyleEmbedding.get_embedding_style)
     alt.themes.enable("embedding_style")
@@ -216,44 +227,22 @@ def generate_semisupervised_pair(project_obj):
             / f"semisupervised_pair_embedding_{expt_name_unann}.npy"
         )
 
-        y_ann = None
-        y_unann = None
-        y_col_name = None
-
-        if args.use_annotations_to_visualize or args.exclude_unannotated_frames:
-            if expt_record_ann.has_annotation:
-                annotations = np.load(expt_path_ann / "annotations.npy")
-                X_ann, y_ann, y_col_name = mask_and_get_values(
-                    X_ann, annotations, expt_record_ann
-                )
-            if expt_record_unann.has_annotation:
-                annotations = np.load(expt_path_unann / "annotations.npy")
-                tmp = args.use_annotations_to_mask
-                args.use_annotations_to_mask = False
-                X_unann, y_unann, y_col_name = mask_and_get_values(
-                    X_unann, annotations, expt_record_unann
-                )
-                args.use_annotations_to_mask = tmp
+        X_ann, y_ann, y_col_name, expt_record_ann = mask_and_get_labels(
+            X_ann, expt_path_ann, expt_record_ann
+        )
+        X_unann, y_unann, y_col_name, expt_record_unann = mask_and_get_labels(
+            X_unann, expt_path_unann, expt_record_unann
+        )
 
         if args.generate_joint_charts:
-            if y_col_name is not None:
-                expt_record_unann.has_annotation = True
-                unannotated_lbl = max(expt_record_ann.label_to_behavior.keys()) + 1
-                expt_record_ann.label_to_behavior[unannotated_lbl] = "Unannotated"
-                expt_record_unann.label_to_behavior = expt_record_ann.label_to_behavior
+            expt_record_unann.label_to_behavior = {
+                **expt_record_ann.label_to_behavior,
+                **expt_record_unann.label_to_behavior,
+            }
+            expt_record_ann = expt_record_unann
 
-                y_unann = (
-                    ["Unannotated" for i in range(X_unann.shape[0])]
-                    if y_unann is None
-                    else y_unann
-                )
-                y_ann = (
-                    ["Unannotated" for i in range(X_ann.shape[0])]
-                    if y_ann is None
-                    else y_ann
-                )
-                y_unann = np.hstack((y_unann, y_ann))
-                y_ann = y_unann
+            y_unann = [*y_unann, *y_ann]
+            y_ann = y_unann
 
             X_unann = np.vstack((X_unann, X_ann))
             X_ann = X_unann
@@ -278,7 +267,11 @@ def generate_semisupervised_pair(project_obj):
                 "subtitle": f"Semisupervised with {expt_name_ann} (unannotated)",
             },
         )
+
         chart_type_name = "semisupervised-pair-embedding"
+        expt_name_unann += get_mask_suffix(expt_record_unann)
+        expt_name_ann += get_mask_suffix(expt_record_ann)
+
         chart_name_unann = (
             f"{expt_name_unann}_{chart_type_name}_{expt_name_ann}{name_suffix}"
         )
@@ -286,6 +279,7 @@ def generate_semisupervised_pair(project_obj):
             embedding_chart_unann,
             str(expt_path_unann / "figures" / f"{chart_name_unann}.{args.extension}"),
         )
+
         chart_name_ann = (
             f"{expt_name_ann}_{chart_type_name}_{expt_name_unann}{name_suffix}"
         )
@@ -305,16 +299,24 @@ def generate_supervised_disparate(project_obj):
         expt_path = project_obj.expt_path_dict[expt_name]
         expt_record = jl.load(expt_path / "expt_record.z")
         X = np.load(expt_path / "embeddings" / "supervised_disparate_embedding.npy")
-        annotations = np.load(expt_path / "annotations.npy")
 
-        y = None
-        y_col_name = None
+        X, y, y_col_name, expt_record = mask_and_get_labels(X, expt_path, expt_record)
 
-        if args.use_annotations_to_visualize or args.exclude_unannotated_frames:
-            X, y, y_col_name = mask_and_get_values(X, annotations, expt_record)
+        embedding_chart = plot_embedding(
+            X,
+            y,
+            y_col_name,
+            expt_record,
+            title={
+                "text": f"{expt_name}",
+                "subtitle": "Supervised disparate",
+            },
+        )
 
-        embedding_chart = plot_embedding(X, y, y_col_name, expt_record, expt_name)
-        chart_name = f"{expt_name}_supervised-disparate-embedding{name_suffix}"
+        mask_suffix = get_mask_suffix(expt_record)
+        chart_name = (
+            f"{expt_name}_supervised-disparate-embedding{mask_suffix}{name_suffix}"
+        )
         save(
             embedding_chart,
             str(expt_path / "figures" / f"{chart_name}.{args.extension}"),
@@ -332,17 +334,23 @@ def generate_unsupervised_disparate(project_obj):
         expt_record = jl.load(expt_path / "expt_record.z")
         X = np.load(expt_path / "embeddings" / "unsupervised_disparate_embedding.npy")
 
-        y = None
-        y_col_name = None
+        X, y, y_col_name, expt_record = mask_and_get_labels(X, expt_path, expt_record)
 
-        if (
-            args.use_annotations_to_visualize or args.exclude_unannotated_frames
-        ) and expt_record.has_annotation:
-            annotations = np.load(expt_path / "annotations.npy")
-            X, y, y_col_name = mask_and_get_values(X, annotations, expt_record)
+        embedding_chart = plot_embedding(
+            X,
+            y,
+            y_col_name,
+            expt_record,
+            title={
+                "text": f"{expt_name}",
+                "subtitle": "Unsupervised disparate",
+            },
+        )
 
-        embedding_chart = plot_embedding(X, y, y_col_name, expt_record, expt_name)
-        chart_name = f"{expt_name}_unsupervised-disparate-embedding{name_suffix}"
+        mask_suffix = get_mask_suffix(expt_record)
+        chart_name = (
+            f"{expt_name}_unsupervised-disparate-embedding{mask_suffix}{name_suffix}"
+        )
         save(
             embedding_chart,
             str(expt_path / "figures" / f"{chart_name}.{args.extension}"),
@@ -351,8 +359,6 @@ def generate_unsupervised_disparate(project_obj):
 
 
 if __name__ == "__main__":
-    FPS = 30
-
     project = experiment_processing.Project(
         args.main_cfg_path,
     )

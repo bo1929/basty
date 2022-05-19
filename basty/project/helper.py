@@ -28,7 +28,7 @@ class ParameterHandler:
 
     def init_annotation_kwargs(self, **kwargs):
         self.annotation_priority = kwargs.pop("annotation_priority", [])
-        self.inactive_annotation = kwargs.pop("inactive_annotation", "Idle")
+        self.inactive_annotation = kwargs.pop("inactive_annotation", "Idle&Other")
         self.noise_annotation = kwargs.pop("noise_annotation", "Noise")
         self.arouse_annotation = kwargs.pop("arouse_annotation", "Moving")
 

@@ -162,7 +162,7 @@ class ActiveBouts(OutlineThresholdGMM, OutlineRandomForestClassifier, SummaryCoe
             initial_labels, winsize=winsize, wintype=wintype
         )
         final_labels = cls.process_short_cont_intvls(
-            intermediate_labels, 1, winsize // 2
+            intermediate_labels, [1], winsize // 2
         )
         mask_active = final_labels == 1
         return mask_active
@@ -182,7 +182,7 @@ class ActiveBouts(OutlineThresholdGMM, OutlineRandomForestClassifier, SummaryCoe
             initial_labels, winsize=winsize, wintype=wintype
         )
         final_labels = self.__class__.process_short_cont_intvls(
-            intermediate_labels, 1, winsize // 2
+            intermediate_labels, [1], winsize // 2
         )
         mask_active = final_labels == 1
         return mask_active
@@ -227,7 +227,7 @@ class DormantEpochs(OutlineThresholdGMM, OutlineRandomForestClassifier):
                         intermediate_labels[intvl_start:intvl_end] = 1  # arouse
         intermediate_labels[intermediate_labels == -1] = 0
         final_labels = cls.process_short_cont_intvls(
-            intermediate_labels, 0, min_dormant
+            intermediate_labels, [0], min_dormant
         )
         mask_dormant = final_labels == 0
         return mask_dormant, final_labels
@@ -247,7 +247,7 @@ class DormantEpochs(OutlineThresholdGMM, OutlineRandomForestClassifier):
             initial_labels, winsize=winsize, wintype=wintype
         )
         final_labels = self.__class__.process_short_cont_intvls(
-            intermediate_labels, 0, min_dormant
+            intermediate_labels, [0], min_dormant
         )
         mask_dormant = final_labels == 0
         return mask_dormant

@@ -8,14 +8,15 @@ import basty.utils.misc as misc
 
 class AnnotationInfo:
     def __init__(self):
-        # no annotation by default
-        self.has_annotation = False
         self._inactive_annotation = None
         self._noise_annotation = None
         self._arouse_annotation = None
         self._label_to_behavior = None
         self._behavior_to_label = None
         self._mask_annotated = None
+        # no annotation by default
+        self.has_annotation = False
+        self.use_annotations_to_mask = False
 
     @property
     def noise_annotation(self):
@@ -134,13 +135,7 @@ class ExptInfo:
     def mask_dormant(self):
         if self._mask_dormant is None:
             raise ValueError("'mask_dormant' is not set.")
-        if self._mask_noise is not None:
-            mask_dormant = np.logical_and(
-                self._mask_dormant, np.logical_not(self._mask_noise)
-            )
-        else:
-            mask_dormant = self._mask_dormant
-        return mask_dormant
+        return self._mask_dormant
 
     @mask_dormant.setter
     def mask_dormant(self, value):
@@ -152,7 +147,13 @@ class ExptInfo:
     def mask_active(self):
         if self._mask_active is None:
             raise ValueError("'mask_active' is not set.")
-        return self._mask_active
+        if self._mask_noise is not None:
+            mask_active = np.logical_and(
+                self._mask_active, np.logical_not(self._mask_noise)
+            )
+        else:
+            mask_active = self._mask_active
+        return mask_active
 
     @mask_active.setter
     def mask_active(self, value):
@@ -188,41 +189,29 @@ class ExptInfo:
     def snapft_to_ftname(self, value):
         if not isinstance(value, dict):
             raise ValueError("'snapft_to_ftname' must have type 'dict'.")
-        if self._ftname_to_snapft is not None:
-            assert misc.reverse_dict(self._ftname_to_snapft) == value
-        else:
-            self.ftname_to_snapft = misc.reverse_dict(value)
         self._snapft_to_ftname = misc.sort_dict(value)
+        self._ftname_to_snapft = misc.reverse_dict(self._snapft_to_ftname)
 
     @ftname_to_snapft.setter
     def ftname_to_snapft(self, value):
         if not isinstance(value, dict):
             raise ValueError("'ftname_to_snapft' must have type 'dict'.")
-        if self._snapft_to_ftname is not None:
-            assert misc.reverse_dict(self._snapft_to_ftname) == value
-        else:
-            self._snapft_to_ftname = misc.reverse_dict(value)
         self._ftname_to_snapft = misc.sort_dict(value)
+        self._snapft_to_ftname = misc.reverse_dict(self._ftname_to_snapft)
 
     @deltaft_to_ftname.setter
     def deltaft_to_ftname(self, value):
         if not isinstance(value, dict):
             raise ValueError("'deltaft_to_ftname' must have type 'dict'.")
-        if self._ftname_to_deltaft is not None:
-            assert misc.reverse_dict(self._ftname_to_deltaft) == value
-        else:
-            self.ftname_to_deltaft = misc.reverse_dict(value)
         self._deltaft_to_ftname = misc.sort_dict(value)
+        self.ftname_to_deltaft = misc.reverse_dict(self._deltaft_to_ftname)
 
     @ftname_to_deltaft.setter
     def ftname_to_deltaft(self, value):
         if not isinstance(value, dict):
             raise ValueError("'ftname_to_deltaft' must have type 'dict'.")
-        if self._deltaft_to_ftname is not None:
-            assert misc.reverse_dict(self._deltaft_to_ftname) == value
-        else:
-            self._deltaft_to_ftname = misc.reverse_dict(value)
         self._ftname_to_deltaft = misc.sort_dict(value)
+        self._deltaft_to_ftname = misc.reverse_dict(self._ftname_to_deltaft)
 
     def _get_sec(self, idx):
         sec_total = idx // self.fps
