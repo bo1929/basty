@@ -20,9 +20,6 @@ class OutlineMixin(PostProcessing):
             else:
                 raise ValueError(f"Given datum name {d} is not defined.")
 
-        if not datums:
-            X = df_values.sum(axis=1, skipna=True).to_numpy()
-
         X[np.isnan(X)] = np.inf
 
         if winsize > 1:
@@ -76,10 +73,9 @@ class OutlineThresholdGMM(OutlineMixin):
         X_s, clusters_s = xc_s[0, :], xc_s[1, :]
 
         cluster_boundaries = X_s[misc.change_points(clusters_s) + 1]
-        sorted_means = sorted(gmm.means_)
 
         # Choose appropriate one based on the distribution.
-        return cluster_boundaries, list(map(lambda x: x[0], sorted_means))
+        return cluster_boundaries, sorted(list(map(lambda x: x[0], gmm.means_)))
 
     @classmethod
     def get_threshold(cls, X, threshold_key, num_gmm_comp, threshold_idx, **kwargs):
@@ -251,3 +247,36 @@ class DormantEpochs(OutlineThresholdGMM, OutlineRandomForestClassifier):
         )
         mask_dormant = final_labels == 0
         return mask_dormant
+
+
+class OutlineComponentGMM(OutlineMixin):
+    @classmethod
+    def get_component(cls, X, num_gmm_comp, component_idx, **kwargs):
+        assert isinstance(X, np.ndarray) and X.ndim == 2
+        assert X.shape[1] == 1
+        gmm = GaussianMixture(n_components=num_gmm_comp, **kwargs)
+        components = gmm.fit_predict(X)
+
+        assert component_idx >= 0 and component_idx < num_gmm_comp
+        components_sorted_by_mean = sorted(
+            [c for c in range(num_gmm_comp)], key=lambda c: gmm.means_[c][0]
+        )
+        stirring_component = components_sorted_by_mean[component_idx]
+
+        mask_component = components == stirring_component
+
+        return mask_component
+
+
+class StirringBouts(SummaryCoefsCWT, OutlineComponentGMM):
+    @classmethod
+    def compute_stirring_bouts(cls, mask_component, winsize=30, wintype="boxcar"):
+        initial_labels = mask_component.astype(int)
+        intermediate_labels = cls.compute_window_majority(
+            initial_labels, winsize=winsize, wintype=wintype
+        )
+        final_labels = cls.process_short_cont_intvls(
+            intermediate_labels, [1], winsize // 2
+        )
+        mask_stirring = final_labels == 1
+        return mask_stirring

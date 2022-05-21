@@ -793,8 +793,8 @@ class BehaviorCorrespondence(BehaviorMixin):
                         * weight
                         * cluster_membership.shape[1]
                     )
-            # behavior_score = scale(behavior_score, axis=0)
             behavior_score = normalize(behavior_score, norm="l1")
+            # behavior_score = scale(behavior_score, axis=0)
 
             self._save_numpy_array(
                 behavior_score,
@@ -877,8 +877,8 @@ class BehaviorCorrespondence(BehaviorMixin):
                     behavior_score[:, behavior_lbl] = (
                         behavior_score[:, behavior_lbl] + cluster_score
                     )
-            # behavior_score = scale(behavior_score, axis=0)
             behavior_score = normalize(behavior_score, norm="l1")
+            # behavior_score = scale(behavior_score, axis=0)
 
             self._save_numpy_array(
                 behavior_score,

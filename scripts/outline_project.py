@@ -2,8 +2,11 @@ import argparse
 
 from utils import log_params
 
-from basty.project.experiment_processing import (ExptActiveBouts,
-                                                 ExptDormantEpochs)
+from basty.project.experiment_processing import (
+    ExptStirringBouts,
+    ExptActiveBouts,
+    ExptDormantEpochs,
+)
 
 parser = argparse.ArgumentParser(
     description="Outlining project to compute dormant epochs and active bouts."
@@ -23,6 +26,10 @@ parser.add_argument(
     action=argparse.BooleanOptionalAction,
 )
 parser.add_argument(
+    "--outline-stirring-bouts",
+    action=argparse.BooleanOptionalAction,
+)
+parser.add_argument(
     "--outline-all",
     action=argparse.BooleanOptionalAction,
 )
@@ -39,7 +46,6 @@ if __name__ == "__main__":
         "datums_winsize": FPS,
         "log_scale": False,
         "scale": False,
-        "normalize": False,
         "min_dormant": 300 * FPS,
         "num_gmm_comp": 2,
         "threshold_key": "local_max",
@@ -66,7 +72,6 @@ if __name__ == "__main__":
         "datums_winsize": FPS // 10,
         "scale": False,
         "log_scale": True,
-        "normalize": False,
         "coefs_summary_method": "max",
         "post_processing_winsize": FPS,
         "post_processing_wintype": "boxcar",
@@ -93,3 +98,21 @@ if __name__ == "__main__":
     if args.outline_active_bouts or args.outline_all:
         active_bouts = ExptActiveBouts(args.main_cfg_path, **active_bouts_kwargs)
         active_bouts.outline_active_bouts()
+
+    stirring_bouts_kwargs = {
+        "datums_rel": [],
+        "datums_ctrl": [],
+        "datums_winsize": FPS // 10,
+        "coefs_summary_method": "max",
+        "scale": True,
+        "log_scale": False,
+        "post_processing_winsize": FPS,
+        "post_processing_wintype": "boxcar",
+        "num_gmm_comp": 3,
+        # Indices start from 0.
+        "component_idx": 1,
+    }
+
+    if args.outline_stirring_bouts or args.outline_all:
+        stirring_bouts = ExptStirringBouts(args.main_cfg_path, **stirring_bouts_kwargs)
+        stirring_bouts.outline_stirring_bouts()

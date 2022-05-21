@@ -79,7 +79,6 @@ class ParameterHandler:
         self.datums_winsize = kwargs.pop("datums_winsize", fps * 1)
         self.scale = kwargs.pop("scale", False)
         self.log_scale = kwargs.pop("log_scale", False)
-        self.normalize = kwargs.pop("scale", False)
 
         self.min_dormant = kwargs.pop("min_dormant", 300 * fps)
 
@@ -104,13 +103,26 @@ class ParameterHandler:
                 **kwargs
             )
 
+    def init_stirring_bouts_kwargs(self, fps, **kwargs):
+        self.datums_rel = kwargs.pop("datums_rel", [])
+        self.datums_ctrl = kwargs.pop("datums_ctrl", [])
+        self.datums_winsize = kwargs.pop("datums_winsize", fps // 10)
+        self.coefs_summary_method = kwargs.pop("coefs_summary_method", "max")
+        self.scale = kwargs.pop("scale", False)
+        self.log_scale = kwargs.pop("log_scale", False)
+        self.post_processing_winsize = kwargs.pop("post_processing_winsize", fps * 1)
+        self.post_processing_wintype = kwargs.pop("post_processing_wintype", "boxcar")
+
+        self.num_gmm_comp = kwargs.pop("num_gmm_comp", 3)
+        # Indices start from 0.
+        self.component_idx = kwargs.pop("component_idx", 1)
+
     def init_active_bouts_kwargs(self, fps, use_supervised_learning, **kwargs):
         self.datums_list = kwargs.pop("datums_list", [[]])
         self.datums_winsize = kwargs.pop("datums_winsize", fps // 10)
         self.coefs_summary_method = kwargs.pop("coefs_summary_method", "max")
         self.scale = kwargs.pop("scale", True)
         self.log_scale = kwargs.pop("log_scale", True)
-        self.normalize = kwargs.pop("scale", False)
 
         self.post_processing_winsize = kwargs.pop("post_processing_winsize", fps * 1)
         self.post_processing_wintype = kwargs.pop("post_processing_wintype", "boxcar")

@@ -1,18 +1,15 @@
 import argparse
+from collections import defaultdict
 
-import altair as alt
 import joblib as jl
 import numpy as np
 import pandas as pd
-from collections import defaultdict
 from sklearn.metrics import classification_report
 from sklearn.neighbors import KNeighborsClassifier
 
 import basty.project.experiment_processing as experiment_processing
 import basty.utils.misc as misc
 from basty.utils.postprocessing import PostProcessing
-
-alt.data_transformers.disable_max_rows()
 
 parser = argparse.ArgumentParser(
     description="Predict behaviors using kNN on semisupervised pair embeddings."

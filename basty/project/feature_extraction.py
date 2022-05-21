@@ -9,8 +9,7 @@ import basty.utils.misc as misc
 import basty.utils.preprocessing as prep
 from basty.feature_extraction.body_pose import BodyPose
 from basty.feature_extraction.spatiotemporal_features import SpatioTemporal
-from basty.feature_extraction.wavelet_transformation import \
-    WaveletTransformation
+from basty.feature_extraction.wavelet_transformation import WaveletTransformation
 from basty.project.experiment_processing import Project
 
 
