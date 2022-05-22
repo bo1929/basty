@@ -12,7 +12,6 @@ from basty.experiment_processing.experiment_info import ExptRecord
 from basty.experiment_processing.experiment_outline import (
     ActiveBouts,
     DormantEpochs,
-    StirringBouts,
 )
 from basty.project.helper import LoadingHelper, Logger, ParameterHandler, SavingHelper
 from basty.utils.annotations import HumanAnnotations as HumAnn
@@ -427,86 +426,4 @@ class ExptActiveBouts(Project):
                 expt_path,
                 "expt_record.z",
                 "with a mask for active bouts",
-            )
-
-
-class ExptStirringBouts(Project):
-    def __init__(self, main_cfg_path, **kwargs):
-        Project.__init__(self, main_cfg_path, **kwargs)
-        self.init_stirring_bouts_kwargs(self.fps, **kwargs)
-
-    @misc.timeit
-    def outline_stirring_bouts(self):
-        pbar = tqdm(self.expt_path_dict.items())
-
-        for name, expt_path in pbar:
-            pbar.set_description(
-                f"Computing feature values of {name} for outlining stirring bouts"
-            )
-
-            expt_record = self._load_joblib_object(expt_path, "expt_record.z")
-            wsft = self._load_numpy_array(expt_path, "wsft.npy")
-            ftname_to_snapft = self._load_yaml_dictionary(
-                expt_path, "ftname_to_snapft.yaml"
-            )
-
-            df_coefs = StirringBouts.get_df_coefs_summary(
-                wsft,
-                ftname_to_snapft,
-                log=self.log_scale,
-                method=self.coefs_summary_method,
-            )
-            del wsft
-
-            if not self.datums_rel:
-                datums_rel = df_coefs.columns
-            else:
-                datums_rel = self.datums_rel
-
-            if not any(self.datums_ctrl):
-                datums_ctrl = []
-            else:
-                datums_ctrl = self.datums_ctrl
-
-            X_rel = StirringBouts.get_datums_values(
-                df_coefs, datums=datums_rel, winsize=self.datums_winsize
-            )
-
-            X_ctrl = StirringBouts.get_datums_values(
-                df_coefs, datums=datums_ctrl, winsize=self.datums_winsize
-            )
-            del df_coefs
-
-            X = (X_rel - X_ctrl).reshape(-1, 1)
-            del X_rel, X_ctrl
-
-            if self.scale:
-                X = robust_scale(X)
-
-            mask_component = StirringBouts.get_component(
-                X, self.num_gmm_comp, self.component_idx
-            )
-            mask_stirring = StirringBouts.compute_stirring_bouts(
-                mask_component,
-                winsize=self.post_processing_winsize,
-                wintype=self.post_processing_wintype,
-            )
-
-            expt_record.mask_stirring = mask_stirring
-            if expt_record.has_annotation:
-                expt_record.mask_stirring = np.logical_and(
-                    expt_record.mask_stirring, np.logical_not(expt_record.mask_noise)
-                )
-            assert mask_stirring.any()
-
-            dormant_and_stirring = np.logical_and(
-                expt_record.mask_stirring, expt_record.mask_dormant
-            )
-            assert dormant_and_stirring.any()
-
-            self._save_joblib_object(
-                expt_record,
-                expt_path,
-                "expt_record.z",
-                "with a mask for stirring bouts",
             )

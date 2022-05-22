@@ -3,7 +3,6 @@ import argparse
 from utils import log_params
 
 from basty.project.experiment_processing import (
-    ExptStirringBouts,
     ExptActiveBouts,
     ExptDormantEpochs,
 )
@@ -26,10 +25,6 @@ parser.add_argument(
     action=argparse.BooleanOptionalAction,
 )
 parser.add_argument(
-    "--outline-stirring-bouts",
-    action=argparse.BooleanOptionalAction,
-)
-parser.add_argument(
     "--outline-all",
     action=argparse.BooleanOptionalAction,
 )
@@ -41,11 +36,7 @@ if __name__ == "__main__":
     FPS = 30
 
     supervised_dormant_epochs = False
-    dormant_epochs_kwargs = {
-        "datums": [],
-        "datums_winsize": FPS,
-        "log_scale": False,
-        "scale": False,
+    dormant_epochs_unsupervised_kwargs = {
         "min_dormant": 300 * FPS,
         "num_gmm_comp": 2,
         "threshold_key": "local_max",
@@ -54,11 +45,15 @@ if __name__ == "__main__":
         "tol_duration": 90 * FPS,
         "tol_percent": 0.4,
     }
-    dormant_epochs_decision_tree_kwargs = {}
+    dormant_epochs_supervised_kwargs = {}
     dormant_epochs_kwargs = {
+        "datums": [],
+        "datums_winsize": FPS,
+        "log_scale": False,
+        "scale": False,
         "use_supervised_learning": supervised_dormant_epochs,
-        **dormant_epochs_kwargs,
-        **dormant_epochs_decision_tree_kwargs,
+        **dormant_epochs_supervised_kwargs,
+        **dormant_epochs_unsupervised_kwargs,
     }
     log_params(args.main_cfg_path, "dormant_epochs", dormant_epochs_kwargs)
 
@@ -67,20 +62,13 @@ if __name__ == "__main__":
         dormant_epochs.outline_dormant_epochs()
 
     supervised_active_bouts = False
-    active_bouts_kwargs = {
-        "datums_list": [[]],
-        "datums_winsize": FPS // 10,
-        "scale": False,
-        "log_scale": True,
-        "coefs_summary_method": "max",
-        "post_processing_winsize": FPS,
-        "post_processing_wintype": "boxcar",
+    active_bouts_unsupervised_kwargs = {
         "num_gmm_comp": 3,
         "threshold_key": "local_min",
         # Indices start from 0.
         "threshold_idx": 1,
     }
-    active_bouts_decision_tree_kwargs = {
+    active_bouts_supervised_kwargs = {
         "n_estimators": 5,
         "max_depth": 5,
         "min_samples_leaf": 10 ** 3,
@@ -89,30 +77,19 @@ if __name__ == "__main__":
         "class_weight": "balanced",
     }
     active_bouts_kwargs = {
+        "datums_list": [[]],
+        "datums_winsize": FPS // 10,
+        "scale": False,
+        "log_scale": True,
+        "coefs_summary_method": "max",
+        "post_processing_winsize": FPS,
+        "post_processing_wintype": "boxcar",
         "use_supervised_learning": supervised_active_bouts,
-        **active_bouts_decision_tree_kwargs,
-        **active_bouts_kwargs,
+        **active_bouts_supervised_kwargs,
+        **active_bouts_unsupervised_kwargs,
     }
     log_params(args.main_cfg_path, "active_bouts", active_bouts_kwargs)
 
     if args.outline_active_bouts or args.outline_all:
         active_bouts = ExptActiveBouts(args.main_cfg_path, **active_bouts_kwargs)
         active_bouts.outline_active_bouts()
-
-    stirring_bouts_kwargs = {
-        "datums_rel": [],
-        "datums_ctrl": [],
-        "datums_winsize": FPS // 10,
-        "coefs_summary_method": "max",
-        "scale": True,
-        "log_scale": False,
-        "post_processing_winsize": FPS,
-        "post_processing_wintype": "boxcar",
-        "num_gmm_comp": 3,
-        # Indices start from 0.
-        "component_idx": 1,
-    }
-
-    if args.outline_stirring_bouts or args.outline_all:
-        stirring_bouts = ExptStirringBouts(args.main_cfg_path, **stirring_bouts_kwargs)
-        stirring_bouts.outline_stirring_bouts()

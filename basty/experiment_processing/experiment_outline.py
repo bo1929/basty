@@ -261,22 +261,6 @@ class OutlineComponentGMM(OutlineMixin):
         components_sorted_by_mean = sorted(
             [c for c in range(num_gmm_comp)], key=lambda c: gmm.means_[c][0]
         )
-        stirring_component = components_sorted_by_mean[component_idx]
-
-        mask_component = components == stirring_component
+        mask_component = components == components_sorted_by_mean[component_idx]
 
         return mask_component
-
-
-class StirringBouts(SummaryCoefsCWT, OutlineComponentGMM):
-    @classmethod
-    def compute_stirring_bouts(cls, mask_component, winsize=30, wintype="boxcar"):
-        initial_labels = mask_component.astype(int)
-        intermediate_labels = cls.compute_window_majority(
-            initial_labels, winsize=winsize, wintype=wintype
-        )
-        final_labels = cls.process_short_cont_intvls(
-            intermediate_labels, [1], winsize // 2
-        )
-        mask_stirring = final_labels == 1
-        return mask_stirring

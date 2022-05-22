@@ -29,9 +29,6 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-# bout and epochs duration distributions; predicted vs. real
-
-
 def get_recall_report(recall_dict, behavior_domain):
     report = ""
     for behavior in behavior_domain:
@@ -47,7 +44,7 @@ def get_recall_report(recall_dict, behavior_domain):
 def get_evaluation_report(evaluation_dict, behavior_domain):
     report = ""
     report += (
-        f"\t- {round(evaluation_dict['masked_percent'], 2)} of frames are masked.\n"
+        f"\t= {round(evaluation_dict['masked_percent'], 2)} of frames are masked.\n"
     )
     report += get_recall_report(evaluation_dict["recall_dict"], behavior_domain)
     return report

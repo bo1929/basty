@@ -101,7 +101,6 @@ class ExptInfo:
         self._mask_dormant = None
         self._mask_active = None
         self._mask_noise = None
-        self._mask_stirring = None
         self._ftname_to_snapft = None
         self._ftname_to_deltaft = None
         self._snapft_to_ftname = None
@@ -155,24 +154,6 @@ class ExptInfo:
         else:
             mask_active = self._mask_active
         return mask_active
-
-    @property
-    def mask_stirring(self):
-        if self._mask_stirring is None:
-            raise ValueError("'mask_stirring' is not set.")
-        if self._mask_noise is not None:
-            mask_stirring = np.logical_and(
-                self._mask_stirring, np.logical_not(self._mask_noise)
-            )
-        else:
-            mask_stirring = self._mask_stirring
-        return mask_stirring
-
-    @mask_stirring.setter
-    def mask_stirring(self, value):
-        if not isinstance(value, np.ndarray) and value.ndim == 1:
-            raise ValueError("'mask_stirring' must have type '1D numpy.ndarray'.")
-        self._mask_stirring = value
 
     @mask_active.setter
     def mask_active(self, value):
