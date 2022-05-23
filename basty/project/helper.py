@@ -101,6 +101,7 @@ class ParameterHandler:
             self.decision_tree_kwargs = self.__class__.decision_tree_default_kwargs(
                 **kwargs
             )
+            self.label_conversion_dict = kwargs.pop("label_conversion_dict", {})
 
     def init_active_bouts_kwargs(self, fps, use_supervised_learning, **kwargs):
         self.datums_list = kwargs.pop("datums_list", [[]])
@@ -121,6 +122,7 @@ class ParameterHandler:
             self.decision_tree_kwargs = self.__class__.decision_tree_default_kwargs(
                 **kwargs
             )
+            self.label_conversion_dict = kwargs.pop("label_conversion_dict", {})
 
     def init_behavior_embeddings_kwargs(self, **kwargs):
         self.UMAP_kwargs = {}

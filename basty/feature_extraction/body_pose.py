@@ -181,23 +181,23 @@ class BodyPose:
     def _nearest_time_point_orientation(self, orientations, left_llh, right_llh):
         for idx in list(orientations["idx"]):
             left_closest = (
-                min(orientations["left"], key=lambda x: abs(x - idx))
+                np.min(orientations["left"], key=lambda x: np.abs(x - idx))
                 if len(orientations["left"]) > 0
                 else -1
             )
             right_closest = (
-                min(orientations["right"], key=lambda x: abs(x - idx))
+                np.min(orientations["right"], key=lambda x: np.abs(x - idx))
                 if len(orientations["right"]) > 0
                 else -1
             )
 
             if (left_llh.iloc[idx] > right_llh.iloc[idx]) and (
-                abs(idx - left_closest) > abs(idx - right_closest)
+                np.abs(idx - left_closest) > np.abs(idx - right_closest)
             ):
                 orientations["left"].add(idx)
                 orientations["idx"].remove(idx)
             elif (left_llh.iloc[idx] > right_llh.iloc[idx]) and (
-                abs(idx - left_closest) > abs(idx - right_closest)
+                np.abs(idx - left_closest) > np.abs(idx - right_closest)
             ):
                 orientations["right"].add(idx)
                 orientations["idx"].remove(idx)

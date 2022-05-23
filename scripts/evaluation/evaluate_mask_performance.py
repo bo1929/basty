@@ -33,10 +33,10 @@ def get_recall_report(recall_dict, behavior_domain):
     report = ""
     for behavior in behavior_domain:
         if recall_dict[behavior] is None:
-            report += f"\t- {behavior} is not observed.\n"
+            report += f"\t\t- {behavior} is not observed.\n"
         else:
             report += (
-                f"\t- {round(recall_dict[behavior], 2)} of {behavior} is observed.\n"
+                f"\t\t- {round(recall_dict[behavior], 2)} of {behavior} is observed.\n"
             )
     return report
 

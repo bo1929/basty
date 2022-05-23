@@ -74,13 +74,9 @@ class BehaviorEmbedding(BehaviorMixin):
 
         prev = 0
         for expt_name in unannotated_expt_names:
-            X_expt, expt_record, _ = iterate_expt_for_embedding(expt_name)
+            X_expt, expt_record, expt_path = iterate_expt_for_embedding(expt_name)
             y_expt = np.zeros(X_expt.shape[0], dtype=int) - 1
 
-            # This is for easy experimentation by only changing main configuration.
-            expt_record.has_annotation = expt_name in list(
-                self.annotation_path_dict.keys()
-            )  #  TODO: Should be removed.
             if self.use_annotations_to_mask and expt_record.has_annotation:
                 mask_active = expt_record.mask_annotated
                 expt_record.use_annotations_to_mask = True
@@ -94,6 +90,7 @@ class BehaviorEmbedding(BehaviorMixin):
 
             expt_indices_dict[expt_name] = prev, prev + y_expt_dict[expt_name].shape[0]
             prev = expt_indices_dict[expt_name][-1]
+            self._save_joblib_object(expt_record, expt_path, "expt_record.z")
 
         for expt_name in annotated_expt_names:
             X_expt, expt_record, expt_path = iterate_expt_for_embedding(expt_name)
@@ -101,9 +98,12 @@ class BehaviorEmbedding(BehaviorMixin):
             assert expt_record.has_annotation
             if self.use_annotations_to_mask:
                 mask_active = expt_record.mask_annotated
+                expt_record.use_annotations_to_mask = True
             else:
                 mask_active = expt_record.mask_active
+                expt_record.use_annotations_to_mask = False
             mask_dormant = expt_record.mask_dormant
+
             y_expt = self._load_numpy_array(expt_path, "annotations.npy")
 
             X_expt_dict[expt_name] = X_expt[mask_dormant & mask_active]
@@ -114,6 +114,7 @@ class BehaviorEmbedding(BehaviorMixin):
                 prev + y_expt_dict[expt_name].shape[0],
             )
             prev = expt_indices_dict[expt_name][-1]
+            self._save_joblib_object(expt_record, expt_path, "expt_record.z")
 
         X = np.concatenate(list(X_expt_dict.values()), axis=0)
         y = np.concatenate(list(y_expt_dict.values()), axis=0)

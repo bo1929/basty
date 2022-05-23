@@ -204,7 +204,7 @@ class ExptInfo:
         if not isinstance(value, dict):
             raise ValueError("'deltaft_to_ftname' must have type 'dict'.")
         self._deltaft_to_ftname = misc.sort_dict(value)
-        self.ftname_to_deltaft = misc.reverse_dict(self._deltaft_to_ftname)
+        self._ftname_to_deltaft = misc.reverse_dict(self._deltaft_to_ftname)
 
     @ftname_to_deltaft.setter
     def ftname_to_deltaft(self, value):

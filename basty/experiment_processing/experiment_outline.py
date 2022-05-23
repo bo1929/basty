@@ -10,15 +10,17 @@ from basty.utils.postprocessing import PostProcessing
 
 class OutlineMixin(PostProcessing):
     @staticmethod
-    def get_datums_values(df_values, datums=[], winsize=3):
+    def get_datums_values(df_values, stft_to_ftname, datums=[], winsize=3):
         assert isinstance(df_values, pd.DataFrame) and df_values.ndim == 2
 
         X = np.zeros(df_values.shape[0])
         for d in datums:
-            if d in df_values.columns:
-                X = X + df_values[d].to_numpy()
+            if stft_to_ftname[d] in df_values.columns:
+                X = X + df_values[stft_to_ftname[d]].to_numpy()
             else:
-                raise ValueError(f"Given datum name {d} is not defined.")
+                raise ValueError(
+                    f"Given datum name {stft_to_ftname[d]} is not defined."
+                )
 
         X[np.isnan(X)] = np.inf
 
@@ -157,7 +159,7 @@ class ActiveBouts(OutlineThresholdGMM, OutlineRandomForestClassifier, SummaryCoe
         intermediate_labels = cls.compute_window_majority(
             initial_labels, winsize=winsize, wintype=wintype
         )
-        final_labels = cls.process_short_cont_intvls(
+        final_labels = cls.postprocess_wrt_durations(
             intermediate_labels, [1], winsize // 2
         )
         mask_active = final_labels == 1
@@ -177,7 +179,7 @@ class ActiveBouts(OutlineThresholdGMM, OutlineRandomForestClassifier, SummaryCoe
         intermediate_labels = self.compute_window_majority(
             initial_labels, winsize=winsize, wintype=wintype
         )
-        final_labels = self.__class__.process_short_cont_intvls(
+        final_labels = self.__class__.postprocess_wrt_durations(
             intermediate_labels, [1], winsize // 2
         )
         mask_active = final_labels == 1
@@ -222,7 +224,7 @@ class DormantEpochs(OutlineThresholdGMM, OutlineRandomForestClassifier):
                     else:
                         intermediate_labels[intvl_start:intvl_end] = 1  # arouse
         intermediate_labels[intermediate_labels == -1] = 0
-        final_labels = cls.process_short_cont_intvls(
+        final_labels = cls.postprocess_wrt_durations(
             intermediate_labels, [0], min_dormant
         )
         mask_dormant = final_labels == 0
@@ -242,7 +244,7 @@ class DormantEpochs(OutlineThresholdGMM, OutlineRandomForestClassifier):
         intermediate_labels = self.compute_window_majority(
             initial_labels, winsize=winsize, wintype=wintype
         )
-        final_labels = self.__class__.process_short_cont_intvls(
+        final_labels = self.__class__.postprocess_wrt_durations(
             intermediate_labels, [0], min_dormant
         )
         mask_dormant = final_labels == 0

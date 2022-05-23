@@ -26,7 +26,7 @@ class WaveletTransformation:
         assert self.freq_low > 0
         assert self.freq_spacing in ["dyadic", "linear"]
 
-        if self.freq_up > self.sampling_freq / 2:
+        if self.freq_up > (self.sampling_freq / 2):
             self.logger.warning(
                 f"Upper bound frequency {self.freq_up} is greater than Nyquist frequency."
             )

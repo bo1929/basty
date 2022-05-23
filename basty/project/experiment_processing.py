@@ -9,10 +9,7 @@ from tqdm import tqdm
 import basty.utils.io as io
 import basty.utils.misc as misc
 from basty.experiment_processing.experiment_info import ExptRecord
-from basty.experiment_processing.experiment_outline import (
-    ActiveBouts,
-    DormantEpochs,
-)
+from basty.experiment_processing.experiment_outline import ActiveBouts, DormantEpochs
 from basty.project.helper import LoadingHelper, Logger, ParameterHandler, SavingHelper
 from basty.utils.annotations import HumanAnnotations as HumAnn
 
@@ -215,12 +212,15 @@ class ExptDormantEpochs(Project):
             )
 
             if not self.datums:
-                datums = list(ftname_to_deltaft.keys())
+                datums = list(ftname_to_deltaft.values())
             else:
                 datums = self.datums
 
             X = DormantEpochs.get_datums_values(
-                delta_stft, datums=datums, winsize=self.datums_winsize
+                delta_stft,
+                misc.reverse_dict(ftname_to_deltaft),
+                datums=datums,
+                winsize=self.datums_winsize,
             ).reshape((-1, 1))
 
             if self.log_scale:
@@ -246,13 +246,22 @@ class ExptDormantEpochs(Project):
                 expt_path = self.expt_path_dict[ann_expt_name]
                 expt_record = self._load_joblib_object(expt_path, "expt_record.z")
                 y_ann = self._load_numpy_array(expt_path, "annotations.npy")
-                lbl1 = expt_record.behavior_to_label[expt_record.arouse_annotation]
-                lbl2 = expt_record.behavior_to_label[expt_record.noise_annotation]
 
                 X_train = X_expt_dict[ann_expt_name]
                 y_train = np.zeros(y_ann.shape, dtype=int)
-                y_train[y_ann == lbl1] = 1
-                y_train[y_ann == lbl2] = 2
+
+                if self.label_conversion_dict:
+                    for new_label, behavior_list in self.label_conversion_dict.items():
+                        for behavior in behavior_list:
+                            old_label = expt_record.behavior_to_label[behavior]
+                            y_train[y_ann == old_label] = new_label
+                else:
+                    inactive_label, noise_label = (
+                        expt_record.behavior_to_label[expt_record.inactive_annotation],
+                        expt_record.behavior_to_label[expt_record.noise_annotation],
+                    )
+                    y_train[y_ann != inactive_label] += 1
+                    y_train[y_ann == noise_label] += 1
 
                 X_train_list.append(X_train)
                 y_train_list.append(y_train)
@@ -332,7 +341,9 @@ class ExptActiveBouts(Project):
             del wsft
 
             if not any(self.datums_list):
-                datums_list = [[datum] for datum in df_coefs.columns]  # [[]]
+                datums_list = [
+                    [ftname_to_snapft[datum]] for datum in df_coefs.columns
+                ]  # [[]]
             else:
                 datums_list = self.datums_list
 
@@ -340,7 +351,10 @@ class ExptActiveBouts(Project):
             for datums in datums_list:
                 values.append(
                     ActiveBouts.get_datums_values(
-                        df_coefs, datums=datums, winsize=self.datums_winsize
+                        df_coefs,
+                        misc.reverse_dict(ftname_to_snapft),
+                        datums=datums,
+                        winsize=self.datums_winsize,
                     )
                 )
             del df_coefs
@@ -372,14 +386,22 @@ class ExptActiveBouts(Project):
                 expt_path = self.expt_path_dict[ann_expt_name]
                 expt_record = self._load_joblib_object(expt_path, "expt_record.z")
                 y_ann = self._load_numpy_array(expt_path, "annotations.npy")
-                behavior_to_label = expt_record.behavior_to_label
-                lbl1 = behavior_to_label[expt_record.inactive_annotation]
-                lbl2 = behavior_to_label[expt_record.noise_annotation]
 
                 X_train = X_expt_dict[ann_expt_name]
                 y_train = np.zeros(y_ann.shape, dtype=int)
-                y_train[y_ann != lbl1] = 1
-                y_train[y_ann == lbl2] = 2
+
+                if self.label_conversion_dict:
+                    for new_label, behavior_list in self.label_conversion_dict.items():
+                        for behavior in behavior_list:
+                            old_label = expt_record.behavior_to_label[behavior]
+                            y_train[y_ann == old_label] = new_label
+                else:
+                    inactive_label, noise_label = (
+                        expt_record.behavior_to_label[expt_record.inactive_annotation],
+                        expt_record.behavior_to_label[expt_record.noise_annotation],
+                    )
+                    y_train[y_ann != inactive_label] += 1
+                    y_train[y_ann == noise_label] += 1
 
                 X_train_list.append(X_train[expt_record.mask_dormant])
                 y_train_list.append(y_train[expt_record.mask_dormant])

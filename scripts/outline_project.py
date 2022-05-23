@@ -2,10 +2,7 @@ import argparse
 
 from utils import log_params
 
-from basty.project.experiment_processing import (
-    ExptActiveBouts,
-    ExptDormantEpochs,
-)
+from basty.project.experiment_processing import ExptActiveBouts, ExptDormantEpochs
 
 parser = argparse.ArgumentParser(
     description="Outlining project to compute dormant epochs and active bouts."
@@ -61,7 +58,7 @@ if __name__ == "__main__":
         dormant_epochs = ExptDormantEpochs(args.main_cfg_path, **dormant_epochs_kwargs)
         dormant_epochs.outline_dormant_epochs()
 
-    supervised_active_bouts = False
+    supervised_active_bouts = True
     active_bouts_unsupervised_kwargs = {
         "num_gmm_comp": 3,
         "threshold_key": "local_min",
@@ -75,13 +72,14 @@ if __name__ == "__main__":
         "max_features": "sqrt",
         "criterion": "gini",
         "class_weight": "balanced",
+        "label_conversion_dict": {},
     }
     active_bouts_kwargs = {
         "datums_list": [[]],
         "datums_winsize": FPS // 10,
-        "scale": False,
+        "scale": True,
         "log_scale": True,
-        "coefs_summary_method": "max",
+        "coefs_summary_method": "sum",
         "post_processing_winsize": FPS,
         "post_processing_wintype": "boxcar",
         "use_supervised_learning": supervised_active_bouts,

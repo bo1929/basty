@@ -4,7 +4,7 @@ from collections import defaultdict
 import joblib as jl
 import numpy as np
 import pandas as pd
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.neighbors import KNeighborsClassifier
 
 import basty.project.experiment_processing as experiment_processing
@@ -31,6 +31,10 @@ parser.add_argument(
     action=argparse.BooleanOptionalAction,
 )
 parser.add_argument(
+    "--normalize-weights",
+    action=argparse.BooleanOptionalAction,
+)
+parser.add_argument(
     "--silent",
     action=argparse.BooleanOptionalAction,
 )
@@ -51,17 +55,139 @@ def get_mask(expt_record):
     return mask
 
 
+def get_bout_details_report(y_true, y_pred, behavior_to_label):
+    bout_details_report = "Details about the bouts:\n"
+
+    def get_bout_details(y):
+        intvls = misc.cont_intvls(y)
+        number_of_bouts = defaultdict(int)
+        duration_of_bouts = defaultdict(list)
+        interval_of_bouts = defaultdict(list)
+        for i in range(intvls.shape[0] - 1):
+            number_of_bouts[y[intvls[i]]] += 1
+            duration_of_bouts[y[intvls[i]]].append(intvls[i + 1] - intvls[i])
+            interval_of_bouts[y[intvls[i]]].append((intvls[i], intvls[i + 1]))
+        return number_of_bouts, duration_of_bouts, interval_of_bouts
+
+    def generate_report(number_of_bouts, duration_of_bouts, label_to_behavior):
+        bout_details_report = ""
+        for label, count in number_of_bouts.items():
+            median_duration = np.median(duration_of_bouts[label])
+            q25_duration = np.quantile(duration_of_bouts[label], 0.25)
+            q75_duration = np.quantile(duration_of_bouts[label], 0.75)
+            bout_details_report += f"\t- {label_to_behavior[label]}: "
+            bout_details_report += f"number of bouts {count}, "
+            bout_details_report += "Q25, median, & Q75 duration: "
+            bout_details_report += (
+                f"{q25_duration}, {median_duration} & {q75_duration}\n"
+            )
+        return bout_details_report
+
+    (
+        number_of_bouts_true,
+        duration_of_bouts_true,
+        interval_of_bouts_true,
+    ) = get_bout_details(y_true)
+    (
+        number_of_bouts_pred,
+        duration_of_bouts_pred,
+        interval_of_bouts_pred,
+    ) = get_bout_details(y_pred)
+
+    label_to_behavior = misc.reverse_dict(behavior_to_label)
+
+    bout_details_report += "= For true annotations;\n"
+    bout_details_report += generate_report(
+        number_of_bouts_true, duration_of_bouts_true, label_to_behavior
+    )
+
+    bout_details_report += "= For predicted annotations;\n"
+    bout_details_report += generate_report(
+        number_of_bouts_pred, duration_of_bouts_pred, label_to_behavior
+    )
+
+    def compute_intersection_score(interval_of_bouts_1, interval_of_bouts_2):
+        intersection_score_dict = {}
+        for label, intervals_1 in interval_of_bouts_1.items():
+            intersect_indicators = []
+            intervals_2 = interval_of_bouts_2[label]
+            for start_1, end_1 in intervals_1:
+                for start_2, end_2 in intervals_2:
+                    if start_2 >= start_1 and start_2 <= end_1:
+                        found = True
+                        break
+                    elif start_1 >= start_2 and start_1 <= end_2:
+                        found = True
+                        break
+                    elif start_2 >= end_1:
+                        found = False
+                        break
+                    else:
+                        found = False
+                intersect_indicators.append(found)
+            intersection_score_dict[label] = np.mean(intersect_indicators)
+        return intersection_score_dict
+
+    recall_intersection_dict = compute_intersection_score(
+        interval_of_bouts_true, interval_of_bouts_pred
+    )
+    precision_intersection_dict = compute_intersection_score(
+        interval_of_bouts_pred, interval_of_bouts_true
+    )
+
+    def generate_report(
+        recall_intersection_dict, precision_intersection_dict, label_to_behavior
+    ):
+        bout_details_report = ""
+        for label, recall in recall_intersection_dict.items():
+            precision = precision_intersection_dict[label]
+            bout_details_report += f"\t- {label_to_behavior[label]}: "
+            bout_details_report += "recall & precision w.r.t. bout intersection: "
+            bout_details_report += f"{round(recall, 2)} & {round(precision, 2)}\n"
+        return bout_details_report
+
+    bout_details_report += "= Bout coverage scores;\n"
+    bout_details_report += generate_report(
+        recall_intersection_dict, precision_intersection_dict, label_to_behavior
+    )
+
+    return bout_details_report
+
+
+def get_confusion_matrix_report(y_true, y_pred, behavior_to_label):
+    label_to_behavior = misc.reverse_dict(behavior_to_label)
+    labels_unique = np.unique(y_true)
+    behaviors_unique = [label_to_behavior[label] for label in labels_unique]
+    df = pd.DataFrame(
+        confusion_matrix(y_true, y_pred, labels=labels_unique),
+        columns=behaviors_unique,
+        index=behaviors_unique,
+    )
+    return "\n" + df.to_string()
+
+
 def get_classification_report(y_true, y_pred, behavior_to_label):
     y_uniq = np.unique(y_pred)
     label_to_behavior = misc.reverse_dict(behavior_to_label)
     target_behaviors = [label_to_behavior[label] for label in y_uniq]
     labels = [behavior_to_label[behavior] for behavior in target_behaviors]
-    report = classification_report(
-        y_true,
-        y_pred,
-        labels=labels,
-        target_names=target_behaviors,
+    report = (
+        classification_report(
+            y_true,
+            y_pred,
+            labels=labels,
+            target_names=target_behaviors,
+        )
+        + "\n"
     )
+    return report
+
+
+def get_performance_report(y_true, y_pred, behavior_to_label):
+    report = ""
+    report += get_classification_report(y_true, y_pred, behavior_to_label)
+    report += get_bout_details_report(y_true, y_pred, behavior_to_label)
+    report += get_confusion_matrix_report(y_true, y_pred, behavior_to_label)
     return report
 
 
@@ -110,7 +236,7 @@ def predict_behavioral_bouts(project_obj, verbose, **kwargs):
             raise ValueError
 
         neigh = KNeighborsClassifier(
-            n_neighbors=kwargs["num_neighbors"], weights="distance"
+            n_neighbors=kwargs.get("num_neighbors", 10), weights="distance"
         )
         neigh.fit(X_ann, y_true_ann)
 
@@ -123,6 +249,15 @@ def predict_behavioral_bouts(project_obj, verbose, **kwargs):
         for i in range(neighbors_labels.shape[0]):
             for j in range(neighbors_labels.shape[1]):
                 w_pred_unann[i, neighbors_labels[i, j]] += weights[i, j]
+
+        if kwargs.get("normalize_weights", False):
+            uniq_true_ann, counts_true_ann = np.unique(y_true_ann, return_counts=True)
+            for idx, label in enumerate(uniq_true_ann):
+                # denom = np.sqrt(counts_true_ann[idx] + 1)
+                # denom = np.log2(counts_true_ann[idx] + 1)
+                denom = counts_true_ann[idx] + 1
+                w_pred_unann[:, label] = w_pred_unann[:, label] / denom
+
         total_weight_dict[expt_name_unann].append(w_pred_unann)
 
     for expt_name_unann in unannotated_expt_names:
@@ -149,24 +284,30 @@ def predict_behavioral_bouts(project_obj, verbose, **kwargs):
         annotations_pred_unann[mask_active_unann] = y_tpred_unann
         annotations_pred_unann[mask_arouse_unann] = arouse_label
 
-        labels_to_process = [
-            all_behavior_to_label[behaivor]
-            for behaivor in kwargs.get("behaviors_to_process", [])
-        ]
         annotations_pred_unann = PostProcessing.compute_window_majority(
             annotations_pred_unann, kwargs.get("majority_window_size", 0)
         )
-
-        annotations_pred_unann = PostProcessing.process_short_cont_intvls(
+        annotations_pred_unann = PostProcessing.postprocess_wrt_durations(
             annotations_pred_unann,
-            labels_to_process,
-            kwargs.get("min_short_intvl", 0),
+            [
+                all_behavior_to_label[behaivor]
+                for behaivor in kwargs.get("postprocess_short_behaviors", [])
+            ],
+            kwargs.get("min_short_duration", 0),
+        )
+        annotations_pred_unann = PostProcessing.postprocess_wrt_durations(
+            annotations_pred_unann,
+            [
+                all_behavior_to_label[behaivor]
+                for behaivor in kwargs.get("postprocess_long_behaviors", [])
+            ],
+            kwargs.get("max_long_duration", 0),
         )
         annotations_pred_unann[annotations_pred_unann == -1] = 0
 
         if expt_record_unann.has_annotation and verbose:
             annotations_unann = np.load(expt_path_unann / "annotations.npy")
-            report_full = get_classification_report(
+            report_full = get_performance_report(
                 annotations_unann, annotations_pred_unann, all_behavior_to_label
             )
             print("\n", expt_name_unann)
@@ -181,11 +322,19 @@ if __name__ == "__main__":
     prediction_kwargs = {
         "num_neighbors": args.num_neighbors,
         "hard_vote": args.hard_vote,
+        "normalize_weights": args.normalize_weights,
     }
     postprocessing_kwargs = {
-        "behaviors_to_process": ["ProboscisPump", "Moving", "Grooming"],
-        "majority_window_size": project.fps * 1,
-        "min_short_intvl": int(project.fps * 1.5),
+        "majority_window_size": int(project.fps * 2),
+        "min_short_duration": int(project.fps * 1),
+        "postprocess_short_behaviors": [
+            "ProboscisPump",
+            "Moving",
+            "Grooming",
+            "HaltereSwitch",
+        ],
+        "max_long_duration": int(project.fps * -10.0),
+        "postprocess_long_behaviors": ["HaltereSwitch"],
     }
     predict_behavioral_bouts(
         project, verbose=(not args.silent), **prediction_kwargs, **postprocessing_kwargs
