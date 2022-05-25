@@ -2,7 +2,8 @@
 name = "basty"
 version = "0.1.0"
 description = ""
-authors = ["Ali Osman Berk Şapcı <aliosmanberk@sabanciuniv.edu>"]
+authors = ["Ali Osman Berk Şapcı <aliosmanberk@sabanciuniv.edu>",
+"Mehmet Fatih Keleş <mkeles1@jhmi.edu>"]
 license = "MIT"
 
 [tool.poetry.dependencies]

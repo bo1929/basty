@@ -49,6 +49,14 @@ class BehaviorEmbedding(BehaviorMixin):
         BehaviorMixin.__init__(self, main_cfg_path, **kwargs)
         self.init_behavior_embeddings_kwargs(**kwargs)
 
+    def _update_expt_record(self, expt_path, embedding_name):
+        expt_record = self._load_joblib_object(expt_path, "expt_record.z")
+        if self.use_annotations_to_mask and expt_record.has_annotation:
+            expt_record.use_annotations_to_mask[embedding_name] = True
+        else:
+            expt_record.use_annotations_to_mask[embedding_name] = False
+        self._save_joblib_object(expt_record, expt_path, "expt_record.z")
+
     @misc.timeit
     def compute_behavior_embedding(self, unannotated_expt_names, annotated_expt_names):
         all_valid_expt_names = list(self.expt_path_dict.keys())
@@ -79,10 +87,8 @@ class BehaviorEmbedding(BehaviorMixin):
 
             if self.use_annotations_to_mask and expt_record.has_annotation:
                 mask_active = expt_record.mask_annotated
-                expt_record.use_annotations_to_mask = True
             else:
                 mask_active = expt_record.mask_active
-                expt_record.use_annotations_to_mask = False
             mask_dormant = expt_record.mask_dormant
 
             X_expt_dict[expt_name] = X_expt[mask_dormant & mask_active]
@@ -90,21 +96,18 @@ class BehaviorEmbedding(BehaviorMixin):
 
             expt_indices_dict[expt_name] = prev, prev + y_expt_dict[expt_name].shape[0]
             prev = expt_indices_dict[expt_name][-1]
-            self._save_joblib_object(expt_record, expt_path, "expt_record.z")
 
         for expt_name in annotated_expt_names:
             X_expt, expt_record, expt_path = iterate_expt_for_embedding(expt_name)
 
             assert expt_record.has_annotation
-            if self.use_annotations_to_mask:
+            y_expt = self._load_numpy_array(expt_path, "annotations.npy")
+
+            if self.use_annotations_to_mask and expt_record.has_annotation:
                 mask_active = expt_record.mask_annotated
-                expt_record.use_annotations_to_mask = True
             else:
                 mask_active = expt_record.mask_active
-                expt_record.use_annotations_to_mask = False
             mask_dormant = expt_record.mask_dormant
-
-            y_expt = self._load_numpy_array(expt_path, "annotations.npy")
 
             X_expt_dict[expt_name] = X_expt[mask_dormant & mask_active]
             y_expt_dict[expt_name] = y_expt[mask_dormant & mask_active]
@@ -114,7 +117,6 @@ class BehaviorEmbedding(BehaviorMixin):
                 prev + y_expt_dict[expt_name].shape[0],
             )
             prev = expt_indices_dict[expt_name][-1]
-            self._save_joblib_object(expt_record, expt_path, "expt_record.z")
 
         X = np.concatenate(list(X_expt_dict.values()), axis=0)
         y = np.concatenate(list(y_expt_dict.values()), axis=0)
@@ -146,27 +148,32 @@ class BehaviorEmbedding(BehaviorMixin):
             pbar.set_description(
                 f"Computing semisupervised embeddding for {pair_name_msg}"
             )
+
+            unann_expt_path = self.expt_path_dict[unann_expt_name]
+            unann_embedding_name = f"semisupervised_pair_embedding_{ann_expt_name}"
+            self._update_expt_record(unann_expt_path, unann_embedding_name)
+
+            ann_expt_path = self.expt_path_dict[ann_expt_name]
+            ann_embedding_name = f"semisupervised_pair_embedding_{unann_expt_name}"
+            self._update_expt_record(ann_expt_path, ann_embedding_name)
+
             embedding, expt_indices_dict = self.compute_behavior_embedding(
                 [unann_expt_name], [ann_expt_name]
             )
-
-            expt_path = self.expt_path_dict[unann_expt_name]
             start, end = expt_indices_dict[unann_expt_name]
             embedding_expt = embedding[start:end]
             self._save_numpy_array(
                 embedding_expt,
-                expt_path / "embeddings",
-                f"semisupervised_pair_embedding_{ann_expt_name}.npy",
+                unann_expt_path / "embeddings",
+                f"{unann_embedding_name}.npy",
                 depth=3,
             )
-
-            expt_path = self.expt_path_dict[ann_expt_name]
             start, end = expt_indices_dict[ann_expt_name]
             embedding_expt = embedding[start:end]
             self._save_numpy_array(
                 embedding_expt,
-                expt_path / "embeddings",
-                f"semisupervised_pair_embedding_{unann_expt_name}.npy",
+                ann_expt_path / "embeddings",
+                f"{ann_embedding_name}.npy",
                 depth=3,
             )
 
@@ -180,16 +187,20 @@ class BehaviorEmbedding(BehaviorMixin):
             pbar.set_description(
                 f"Computing unsupervised disparate embeddding for {expt_name}"
             )
+
+            expt_path = self.expt_path_dict[expt_name]
+            embedding_name = "unsupervised_disparate_embedding"
+            self._update_expt_record(expt_path, embedding_name)
+
             embedding, expt_indices_dict = self.compute_behavior_embedding(
                 [expt_name], []
             )
-            expt_path = self.expt_path_dict[expt_name]
             start, end = expt_indices_dict[expt_name]
             embedding_expt = embedding[start:end]
             self._save_numpy_array(
                 embedding_expt,
                 expt_path / "embeddings",
-                "unsupervised_disparate_embedding.npy",
+                f"{embedding_name}.npy",
                 depth=3,
             )
 
@@ -203,16 +214,20 @@ class BehaviorEmbedding(BehaviorMixin):
             pbar.set_description(
                 f"Computing supervised disparate embeddding for {ann_expt_name}"
             )
+
+            ann_expt_path = self.expt_path_dict[ann_expt_name]
+            ann_embedding_name = "supervised_disparate_embedding"
+            self._update_expt_record(ann_expt_path, ann_embedding_name)
+
             embedding, expt_indices_dict = self.compute_behavior_embedding(
                 [], [ann_expt_name]
             )
-            expt_path = self.expt_path_dict[ann_expt_name]
             start, end = expt_indices_dict[ann_expt_name]
             embedding_expt = embedding[start:end]
             self._save_numpy_array(
                 embedding_expt,
-                expt_path / "embeddings",
-                "supervised_disparate_embedding.npy",
+                ann_expt_path / "embeddings",
+                f"{ann_embedding_name}.npy",
                 depth=3,
             )
 
@@ -229,13 +244,17 @@ class BehaviorEmbedding(BehaviorMixin):
             pbar.set_description(
                 "Computing joint unsupervised embeddding for all experiments"
             )
+
             expt_path = self.expt_path_dict[expt_name]
+            embedding_name = "unsupervised_joint_embedding"
+            self._update_expt_record(expt_path, embedding_name)
+
             start, end = expt_indices_dict[expt_name]
             embedding_expt = embedding[start:end]
             self._save_numpy_array(
                 embedding_expt,
                 expt_path / "embeddings",
-                "unsupervised_joint_embedding.npy",
+                f"{embedding_name}.npy",
                 depth=3,
             )
 
@@ -252,13 +271,17 @@ class BehaviorEmbedding(BehaviorMixin):
             pbar.set_description(
                 "Computing joint unsupervised embeddding for annotated experiments"
             )
-            expt_path = self.expt_path_dict[ann_expt_name]
+
+            ann_expt_path = self.expt_path_dict[ann_expt_name]
+            ann_embedding_name = "supervised_joint_embedding"
+            self._update_expt_record(ann_expt_path, ann_embedding_name)
+
             start, end = expt_indices_dict[ann_expt_name]
             embedding_expt = embedding[start:end]
             self._save_numpy_array(
                 embedding_expt,
-                expt_path / "embeddings",
-                "supervised_joint_embedding.npy",
+                ann_expt_path / "embeddings",
+                f"{ann_embedding_name}.npy",
                 depth=3,
             )
 
@@ -568,14 +591,13 @@ class BehaviorCorrespondence(BehaviorMixin):
         assert expt_record.has_annotation
         y_ann = self._load_numpy_array(expt_path, "annotations.npy")
 
-        unsupervised_embedding_names = [
-            "unsupervised_disparate_embedding",
-            "unsupervised_joint_embedding",
+        using_annotations_to_mask = [
+            key for key, val in expt_record.use_annotations_to_mask.items() if val
         ]
-        if any([name in clustering_name for name in unsupervised_embedding_names]):
-            y_ann = y_ann[expt_record.mask_dormant & expt_record.mask_active]
-        else:
+        if any([name in clustering_name for name in using_annotations_to_mask]):
             y_ann = y_ann[expt_record.mask_dormant & expt_record.mask_annotated]
+        else:
+            y_ann = y_ann[expt_record.mask_dormant & expt_record.mask_active]
 
         y_cluster = self._load_numpy_array(
             expt_path / "clusterings", f"labels_{clustering_name}.npy"

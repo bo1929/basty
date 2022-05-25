@@ -73,16 +73,16 @@ name_suffix += "-wAnnSize" if args.change_size_wrt_cardinality else ""
 name_suffix += "-JointChart" if args.generate_joint_charts else ""
 
 
-def get_mask_suffix(expt_record):
-    return "-DAnn" if expt_record.use_annotations_to_mask else "-DA"
+def get_mask_suffix(embedding_name, expt_record):
+    return "-DAnn" if expt_record.use_annotations_to_mask[embedding_name] else "-DA"
 
 
-def mask_and_get_labels(X, expt_path, expt_record):
+def mask_and_get_labels(X, expt_path, embedding_name, expt_record):
     y = None
     y_col_name = None
     if expt_record.has_annotation:
         annotations = np.load(expt_path / "annotations.npy")
-        if expt_record.use_annotations_to_mask:
+        if expt_record.use_annotations_to_mask[embedding_name]:
             maskDAnn = np.logical_and(
                 expt_record.mask_annotated, expt_record.mask_dormant
             )
@@ -216,22 +216,18 @@ def generate_semisupervised_pair(project_obj):
         expt_record_unann = jl.load(expt_path_unann / "expt_record.z")
         expt_record_ann = jl.load(expt_path_ann / "expt_record.z")
 
-        X_unann = np.load(
-            expt_path_unann
-            / "embeddings"
-            / f"semisupervised_pair_embedding_{expt_name_ann}.npy"
-        )
-        X_ann = np.load(
-            expt_path_ann
-            / "embeddings"
-            / f"semisupervised_pair_embedding_{expt_name_unann}.npy"
+        ann_embedding_name = f"semisupervised_pair_embedding_{expt_name_unann}"
+        ann_embedding_dir = expt_path_ann / "embeddings"
+        X_ann = np.load(ann_embedding_dir / f"{ann_embedding_name}.npy")
+        X_ann, y_ann, y_col_name, expt_record_ann = mask_and_get_labels(
+            X_ann, expt_path_ann, ann_embedding_name, expt_record_ann
         )
 
-        X_ann, y_ann, y_col_name, expt_record_ann = mask_and_get_labels(
-            X_ann, expt_path_ann, expt_record_ann
-        )
+        unann_embedding_name = f"semisupervised_pair_embedding_{expt_name_ann}"
+        unann_embedding_dir = expt_path_unann / "embeddings"
+        X_unann = np.load(unann_embedding_dir / f"{unann_embedding_name}.npy")
         X_unann, y_unann, y_col_name, expt_record_unann = mask_and_get_labels(
-            X_unann, expt_path_unann, expt_record_unann
+            X_unann, expt_path_unann, unann_embedding_name, expt_record_unann
         )
 
         if args.generate_joint_charts:
@@ -269,8 +265,8 @@ def generate_semisupervised_pair(project_obj):
         )
 
         chart_type_name = "semisupervised-pair-embedding"
-        expt_name_unann += get_mask_suffix(expt_record_unann)
-        expt_name_ann += get_mask_suffix(expt_record_ann)
+        expt_name_unann += get_mask_suffix(unann_embedding_name, expt_record_unann)
+        expt_name_ann += get_mask_suffix(ann_embedding_name, expt_record_ann)
 
         chart_name_unann = (
             f"{expt_name_unann}_{chart_type_name}_{expt_name_ann}{name_suffix}"
@@ -298,9 +294,12 @@ def generate_supervised_disparate(project_obj):
     for expt_name in annotated_expt_names:
         expt_path = project_obj.expt_path_dict[expt_name]
         expt_record = jl.load(expt_path / "expt_record.z")
-        X = np.load(expt_path / "embeddings" / "supervised_disparate_embedding.npy")
+        embedding_name = "supervised_disparate_embedding"
+        X = np.load(expt_path / "embeddings" / f"{embedding_name}.npy")
 
-        X, y, y_col_name, expt_record = mask_and_get_labels(X, expt_path, expt_record)
+        X, y, y_col_name, expt_record = mask_and_get_labels(
+            X, expt_path, embedding_name, expt_record
+        )
 
         embedding_chart = plot_embedding(
             X,
@@ -313,7 +312,7 @@ def generate_supervised_disparate(project_obj):
             },
         )
 
-        mask_suffix = get_mask_suffix(expt_record)
+        mask_suffix = get_mask_suffix(embedding_name, expt_record)
         chart_name = (
             f"{expt_name}_supervised-disparate-embedding{mask_suffix}{name_suffix}"
         )
@@ -332,9 +331,12 @@ def generate_unsupervised_disparate(project_obj):
     for expt_name in all_expt_names:
         expt_path = project_obj.expt_path_dict[expt_name]
         expt_record = jl.load(expt_path / "expt_record.z")
-        X = np.load(expt_path / "embeddings" / "unsupervised_disparate_embedding.npy")
+        embedding_name = "unsupervised_disparate_embedding"
+        X = np.load(expt_path / "embeddings" / f"{embedding_name}.npy")
 
-        X, y, y_col_name, expt_record = mask_and_get_labels(X, expt_path, expt_record)
+        X, y, y_col_name, expt_record = mask_and_get_labels(
+            X, expt_path, embedding_name, expt_record
+        )
 
         embedding_chart = plot_embedding(
             X,
@@ -347,7 +349,7 @@ def generate_unsupervised_disparate(project_obj):
             },
         )
 
-        mask_suffix = get_mask_suffix(expt_record)
+        mask_suffix = get_mask_suffix(embedding_name, expt_record)
         chart_name = (
             f"{expt_name}_unsupervised-disparate-embedding{mask_suffix}{name_suffix}"
         )

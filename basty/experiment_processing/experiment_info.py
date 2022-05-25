@@ -16,7 +16,7 @@ class AnnotationInfo:
         self._mask_annotated = None
         # no annotation by default
         self.has_annotation = False
-        self.use_annotations_to_mask = False
+        self.use_annotations_to_mask = {}
 
     @property
     def noise_annotation(self):
