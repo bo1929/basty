@@ -36,7 +36,8 @@ def get_recall_report(recall_dict, behavior_domain):
             report += f"\t\t- {behavior} is not observed.\n"
         else:
             report += (
-                f"\t\t- {round(recall_dict[behavior], 2)} of {behavior} is observed.\n"
+                # f"\t\t- {round(recall_dict[behavior], 2)} of {behavior} is observed.\n"
+                f"\t\t- {recall_dict[behavior]} of {behavior} is observed.\n"
             )
     return report
 
@@ -69,7 +70,10 @@ def get_recall_scores(masked_annotation_counts, annotation_counts, expt_record):
     for behavior in list(expt_record.label_to_behavior.values()):
         all_count = all_count_dict.get(behavior, 0)
         masked_count = masked_count_dict.get(behavior, 0)
-        recall_dict[behavior] = masked_count / all_count if all_count else None
+        # recall_dict[behavior] = masked_count / all_count if all_count else None
+        recall_dict[behavior] = (
+            f"{masked_count} / {all_count}" if all_count else f"{0} / {0}"
+        )
     return recall_dict
 
 
@@ -101,7 +105,7 @@ def dormant_epoch_evaluation(annotations, annotation_counts, expt_record):
     return evaluation_dict
 
 
-def active_bout_in_dormant_epoch_evaluation(
+def active_bout_and_dormant_epoch_evaluation(
     annotations, annotation_counts, expt_record
 ):
     maskDA = np.logical_and(expt_record.mask_active, expt_record.mask_dormant)
@@ -111,6 +115,30 @@ def active_bout_in_dormant_epoch_evaluation(
 
     recall_dict = get_recall_scores(
         masked_annotation_counts, annotation_counts, expt_record
+    )
+
+    evaluation_dict = {"recall_dict": recall_dict, "masked_percent": masked_percent}
+    return evaluation_dict
+
+
+def active_bout_in_dormant_epoch_evaluation(
+    annotations, annotation_counts, expt_record
+):
+    maskDA = np.logical_and(expt_record.mask_active, expt_record.mask_dormant)
+    maskDA_annotation_counts = np.unique(annotations[maskDA], return_counts=True)
+
+    maskND = np.logical_not(expt_record.mask_dormant)
+    maskND_annotation_counts = np.unique(annotations[maskND], return_counts=True)
+    maskND_annotation_counts = dict(zip(*maskND_annotation_counts))
+
+    for idx, count in enumerate(annotation_counts[1]):
+        countND = maskND_annotation_counts.get(annotation_counts[0][idx], 0)
+        annotation_counts[1][idx] = count - countND
+
+    masked_percent = round(np.count_nonzero(maskDA) / sum(annotation_counts[1]), 2)
+
+    recall_dict = get_recall_scores(
+        maskDA_annotation_counts, annotation_counts, expt_record
     )
 
     evaluation_dict = {"recall_dict": recall_dict, "masked_percent": masked_percent}
@@ -151,6 +179,12 @@ def evaluate_predicted_masks(
                 report += get_evaluation_report(evaluation_dict, behavior_domain)
 
             if evaluate_dormant_epochs and evaluate_active_bouts:
+                report += "- Performance report for active bouts and dormant epochs:\n"
+                evaluation_dict = active_bout_and_dormant_epoch_evaluation(
+                    annotations, annotation_counts, expt_record
+                )
+                report += get_evaluation_report(evaluation_dict, behavior_domain)
+
                 report += "- Performance report for active bouts in dormant epochs:\n"
                 evaluation_dict = active_bout_in_dormant_epoch_evaluation(
                     annotations, annotation_counts, expt_record

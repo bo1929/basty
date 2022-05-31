@@ -314,16 +314,21 @@ class ExptActiveBouts(Project):
         self.init_active_bouts_kwargs(self.fps, use_supervised_learning, **kwargs)
 
     @misc.timeit
-    def outline_active_bouts(self):
-        active_bouts = ActiveBouts()
+    def outline_active_bouts(self, use_annotated_pairs=False):
         X_expt_dict = dict()
+        active_bouts_dict = dict()
         if not self.use_supervised_learning:
             thresholds_expt_dict = defaultdict(list)
+        if not use_annotated_pairs:
+            expt_names = list(self.expt_path_dict.keys())
+        else:
+            expt_names = list(self.annotation_path_dict.keys())
 
-        pbar = tqdm(self.expt_path_dict.items())
-        for name, expt_path in pbar:
+        pbar = tqdm(expt_names)
+        for expt_name in pbar:
+            expt_path = self.expt_path_dict[expt_name]
             pbar.set_description(
-                f"Computing feature values of {name} for outlining active bouts"
+                f"Computing feature values of {expt_name} for outlining active bouts"
             )
 
             expt_record = self._load_joblib_object(expt_path, "expt_record.z")
@@ -364,12 +369,12 @@ class ExptActiveBouts(Project):
             if self.scale:
                 X = robust_scale(X)
 
-            X_expt_dict[name] = X
+            X_expt_dict[expt_name] = X
             del values
 
             if not self.use_supervised_learning:
                 for idx, datums in enumerate(datums_list):
-                    thresholds_expt_dict[name].append(
+                    thresholds_expt_dict[expt_name].append(
                         ActiveBouts.get_threshold(
                             X[expt_record.mask_dormant, idx, np.newaxis],
                             self.threshold_key,
@@ -379,53 +384,82 @@ class ExptActiveBouts(Project):
                     )
 
         if self.use_supervised_learning:
-            X_train_list = []
-            y_train_list = []
 
-            for ann_expt_name, _ in self.annotation_path_dict.items():
-                expt_path = self.expt_path_dict[ann_expt_name]
-                expt_record = self._load_joblib_object(expt_path, "expt_record.z")
-                y_ann = self._load_numpy_array(expt_path, "annotations.npy")
+            def get_training_data(training_expt_names):
+                X_train_list = []
+                y_train_list = []
 
-                X_train = X_expt_dict[ann_expt_name]
-                y_train = np.zeros(y_ann.shape, dtype=int)
+                for ann_expt_name in training_expt_names:
+                    expt_path = self.expt_path_dict[ann_expt_name]
+                    expt_record = self._load_joblib_object(expt_path, "expt_record.z")
+                    y_ann = self._load_numpy_array(expt_path, "annotations.npy")
 
-                if self.label_conversion_dict:
-                    for new_label, behavior_list in self.label_conversion_dict.items():
-                        for behavior in behavior_list:
-                            old_label = expt_record.behavior_to_label[behavior]
-                            y_train[y_ann == old_label] = new_label
-                else:
-                    inactive_label, noise_label = (
-                        expt_record.behavior_to_label[expt_record.inactive_annotation],
-                        expt_record.behavior_to_label[expt_record.noise_annotation],
-                    )
-                    y_train[y_ann != inactive_label] += 1
-                    y_train[y_ann == noise_label] += 1
+                    X_train = X_expt_dict[ann_expt_name]
+                    y_train = np.zeros(y_ann.shape, dtype=int)
 
-                X_train_list.append(X_train[expt_record.mask_dormant])
-                y_train_list.append(y_train[expt_record.mask_dormant])
+                    if self.label_conversion_dict:
+                        for (
+                            new_label,
+                            behavior_list,
+                        ) in self.label_conversion_dict.items():
+                            for behavior in behavior_list:
+                                old_label = expt_record.behavior_to_label[behavior]
+                                y_train[y_ann == old_label] = new_label
+                    else:
+                        inactive_and_other = expt_record.inactive_annotation
+                        noise = expt_record.noise_annotation
+                        inactive_label, noise_label = (
+                            expt_record.behavior_to_label[inactive_and_other],
+                            expt_record.behavior_to_label[noise],
+                        )
+                        y_train[y_ann != inactive_label] += 1
+                        y_train[y_ann == noise_label] += 1
+
+                    X_train_list.append(X_train[expt_record.mask_dormant])
+                    y_train_list.append(y_train[expt_record.mask_dormant])
+                return X_train_list, y_train_list
 
             self.logger.direct_info("Training the decision tree for active bouts.")
-            active_bouts.construct_active_bouts_decision_tree(
-                X_train_list, y_train_list, **self.decision_tree_kwargs
-            )
+            annotated_expt_names = list(self.annotation_path_dict.keys())
+            if use_annotated_pairs:
+                for expt_name in expt_names:
+                    active_bouts = ActiveBouts()
+                    training_expt_names = [
+                        ann_expt_name
+                        for ann_expt_name in annotated_expt_names
+                        if ann_expt_name != expt_name
+                    ]
+                    X_train_list, y_train_list = get_training_data(training_expt_names)
+                    active_bouts.construct_active_bouts_decision_tree(
+                        X_train_list, y_train_list, **self.decision_tree_kwargs
+                    )
+                    active_bouts_dict[expt_name] = active_bouts
+            else:
+                active_bouts = ActiveBouts()
+                training_expt_names = annotated_expt_names
+                X_train_list, y_train_list = get_training_data(training_expt_names)
+                active_bouts.construct_active_bouts_decision_tree(
+                    X_train_list, y_train_list, **self.decision_tree_kwargs
+                )
+                for expt_name in expt_names:
+                    active_bouts_dict[expt_name] = active_bouts
 
-        pbar = tqdm(self.expt_path_dict.items())
-        for name, expt_path in pbar:
-            pbar.set_description(f"Outlining active bouts of {name}")
+        pbar = tqdm(expt_names)
+        for expt_name in pbar:
+            expt_path = self.expt_path_dict[expt_name]
+            pbar.set_description(f"Outlining active bouts of {expt_name}")
 
-            X = X_expt_dict[name]
+            X = X_expt_dict[expt_name]
             expt_record = self._load_joblib_object(expt_path, "expt_record.z")
 
             if self.use_supervised_learning:
-                mask_active = active_bouts.predict_active_bouts(
+                mask_active = active_bouts_dict[expt_name].predict_active_bouts(
                     X,
                     winsize=self.post_processing_winsize,
                     wintype=self.post_processing_wintype,
                 )
             else:
-                thresholds = thresholds_expt_dict[name]
+                thresholds = thresholds_expt_dict[expt_name]
                 mask_active = ActiveBouts.compute_active_bouts(
                     X,
                     thresholds,

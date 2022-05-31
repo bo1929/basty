@@ -38,6 +38,10 @@ parser.add_argument(
     "--silent",
     action=argparse.BooleanOptionalAction,
 )
+parser.add_argument(
+    "--use-annotated-pairs",
+    action=argparse.BooleanOptionalAction,
+)
 args = parser.parse_args()
 
 
@@ -187,83 +191,102 @@ def get_performance_report(y_true, y_pred, behavior_to_label):
     return report
 
 
-def predict_behavioral_bouts(project_obj, verbose, **kwargs):
+def predict_behavioral_bouts(project_obj, use_annotated_pairs, verbose, **kwargs):
     annotated_expt_names = list(project_obj.annotation_path_dict.keys())
     all_expt_names = list(project_obj.expt_path_dict.keys())
-    unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
+    if use_annotated_pairs:
+        unannotated_expt_names = annotated_expt_names
+    else:
+        unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
+    assert all_expt_names
+    assert annotated_expt_names
+    assert unannotated_expt_names
     pairs = misc.list_cartesian_product(annotated_expt_names, unannotated_expt_names)
+    pairs = [(name1, name2) for name1, name2 in pairs if name1 != name2]
 
     total_weight_dict = defaultdict(list)
     all_behavior_to_label = {}
     arouse_annotation = None
 
     for expt_name_ann, expt_name_unann in pairs:
-        print(f"{expt_name_ann} predicts {expt_name_unann}.")
-        expt_path_unann = project_obj.expt_path_dict[expt_name_unann]
-        expt_path_ann = project_obj.expt_path_dict[expt_name_ann]
+        try:
+            print(f"{expt_name_ann} predicts {expt_name_unann}.")
+            expt_path_unann = project_obj.expt_path_dict[expt_name_unann]
+            expt_path_ann = project_obj.expt_path_dict[expt_name_ann]
 
-        expt_record_unann = jl.load(expt_path_unann / "expt_record.z")
-        expt_record_ann = jl.load(expt_path_ann / "expt_record.z")
+            expt_record_unann = jl.load(expt_path_unann / "expt_record.z")
+            expt_record_ann = jl.load(expt_path_ann / "expt_record.z")
 
-        unann_embedding_name = f"semisupervised_pair_embedding_{expt_name_ann}"
-        unann_embedding_dir = expt_path_unann / "embeddings"
-        X_unann = np.load(unann_embedding_dir / f"{unann_embedding_name}.npy")
+            embedding_type = "semisupervised_pair_embedding"
+            if use_annotated_pairs:
+                unann_embedding_name = f"{expt_name_ann}_{embedding_type}_{expt_name_unann}"
+            else:
+                unann_embedding_name = f"{embedding_type}_{expt_name_ann}"
+            unann_embedding_dir = expt_path_unann / "embeddings"
+            print(unann_embedding_dir / f"{unann_embedding_name}.npy")
+            X_unann = np.load(unann_embedding_dir / f"{unann_embedding_name}.npy")
 
-        ann_embedding_name = f"semisupervised_pair_embedding_{expt_name_unann}"
-        ann_embedding_dir = expt_path_ann / "embeddings"
-        X_ann = np.load(ann_embedding_dir / f"{ann_embedding_name}.npy")
+            if use_annotated_pairs:
+                ann_embedding_name = f"{expt_name_ann}_{embedding_type}_{expt_name_unann}"
+            else:
+                ann_embedding_name = f"{embedding_type}_{expt_name_unann}"
+            ann_embedding_dir = expt_path_ann / "embeddings"
+            print(ann_embedding_dir / f"{ann_embedding_name}.npy")
+            X_ann = np.load(ann_embedding_dir / f"{ann_embedding_name}.npy")
 
-        mask_active_unann = get_mask(unann_embedding_name, expt_record_unann)
-        mask_arouse_unann = np.logical_not(expt_record_unann.mask_dormant)
-        mask_active_ann = get_mask(ann_embedding_name, expt_record_ann)
+            mask_active_unann = get_mask(unann_embedding_name, expt_record_unann)
+            mask_arouse_unann = np.logical_not(expt_record_unann.mask_dormant)
+            mask_active_ann = get_mask(ann_embedding_name, expt_record_ann)
 
-        all_behavior_to_label = {
-            **all_behavior_to_label,
-            **expt_record_ann.behavior_to_label,
-        }
+            all_behavior_to_label = {
+                **all_behavior_to_label,
+                **expt_record_ann.behavior_to_label,
+            }
 
-        num_of_labels = len(all_behavior_to_label.values())
-        unann_num_of_frames = mask_active_unann.shape[0]
+            num_of_labels = len(all_behavior_to_label.values())
+            unann_num_of_frames = mask_active_unann.shape[0]
 
-        if arouse_annotation is not None:
-            assert expt_record_ann.arouse_annotation == arouse_annotation
-        arouse_annotation = expt_record_ann.arouse_annotation
-        arouse_label = all_behavior_to_label[arouse_annotation]
+            if arouse_annotation is not None:
+                assert expt_record_ann.arouse_annotation == arouse_annotation
+            arouse_annotation = expt_record_ann.arouse_annotation
+            arouse_label = all_behavior_to_label[arouse_annotation]
 
-        if expt_record_ann.has_annotation:
-            annotations_ann = np.load(expt_path_ann / "annotations.npy")
-            y_true_ann = annotations_ann[mask_active_ann]
-        else:
-            raise ValueError
+            if expt_record_ann.has_annotation:
+                annotations_ann = np.load(expt_path_ann / "annotations.npy")
+                y_true_ann = annotations_ann[mask_active_ann]
+            else:
+                raise ValueError
 
-        neigh = KNeighborsClassifier(
-            n_neighbors=kwargs.get("num_neighbors", 10), weights="distance"
-        )
-        neigh.fit(X_ann, y_true_ann)
+            neigh = KNeighborsClassifier(
+                n_neighbors=kwargs.get("num_neighbors", 10), weights="distance"
+            )
+            neigh.fit(X_ann, y_true_ann)
 
-        distances, n_neighbors = neigh.kneighbors(X_unann)
-        weights = 1 / distances
-        neighbors_labels = np.take_along_axis(
-            y_true_ann[:, np.newaxis], n_neighbors, axis=0
-        )
-        w_pred_unann = np.zeros((neighbors_labels.shape[0], num_of_labels))
-        for i in range(neighbors_labels.shape[0]):
-            for j in range(neighbors_labels.shape[1]):
-                w_pred_unann[i, neighbors_labels[i, j]] += weights[i, j]
+            distances, n_neighbors = neigh.kneighbors(X_unann)
+            weights = 1 / distances
+            neighbors_labels = np.take_along_axis(
+                y_true_ann[:, np.newaxis], n_neighbors, axis=0
+            )
+            w_pred_unann = np.zeros((neighbors_labels.shape[0], num_of_labels))
+            for i in range(neighbors_labels.shape[0]):
+                for j in range(neighbors_labels.shape[1]):
+                    w_pred_unann[i, neighbors_labels[i, j]] += weights[i, j]
 
-        if kwargs.get("normalize_weights", False):
-            uniq_true_ann, counts_true_ann = np.unique(y_true_ann, return_counts=True)
-            for idx, label in enumerate(uniq_true_ann):
-                # denom = np.sqrt(counts_true_ann[idx] + 1)
-                # denom = np.log2(counts_true_ann[idx] + 1)
-                denom = counts_true_ann[idx] + 1
-                w_pred_unann[:, label] = w_pred_unann[:, label] / denom
+            if kwargs.get("normalize_weights", False):
+                uniq_true_ann, counts_true_ann = np.unique(y_true_ann, return_counts=True)
+                for idx, label in enumerate(uniq_true_ann):
+                    # denom = np.sqrt(counts_true_ann[idx] + 1)
+                    # denom = np.log2(counts_true_ann[idx] + 1)
+                    denom = counts_true_ann[idx] + 1
+                    w_pred_unann[:, label] = w_pred_unann[:, label] / denom
 
-        annotations_w_pred_unann = np.zeros((unann_num_of_frames, num_of_labels))
-        annotations_w_pred_unann[mask_active_unann, :] = w_pred_unann
-        annotations_w_pred_unann[mask_arouse_unann, arouse_label] = 1.0
+            annotations_w_pred_unann = np.zeros((unann_num_of_frames, num_of_labels))
+            annotations_w_pred_unann[mask_active_unann, :] = w_pred_unann
+            annotations_w_pred_unann[mask_arouse_unann, arouse_label] = 1.0
 
-        total_weight_dict[expt_name_unann].append(annotations_w_pred_unann)
+            total_weight_dict[expt_name_unann].append(annotations_w_pred_unann)
+        except FileNotFoundError:
+            pass
 
     for expt_name_unann in unannotated_expt_names:
         expt_path_unann = project_obj.expt_path_dict[expt_name_unann]
@@ -337,5 +360,9 @@ if __name__ == "__main__":
         "postprocess_long_behaviors": ["HaltereSwitch"],
     }
     predict_behavioral_bouts(
-        project, verbose=(not args.silent), **prediction_kwargs, **postprocessing_kwargs
+        project,
+        args.use_annotated_pairs,
+        verbose=(not args.silent),
+        **prediction_kwargs,
+        **postprocessing_kwargs,
     )

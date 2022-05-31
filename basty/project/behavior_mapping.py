@@ -130,17 +130,25 @@ class BehaviorEmbedding(BehaviorMixin):
         return embedding, expt_indices_dict
 
     @misc.timeit
-    def compute_semisupervised_pair_embeddings(self):
+    def compute_semisupervised_pair_embeddings(self, use_annotated_pairs=False):
         all_expt_names = list(self.expt_path_dict.keys())
         annotated_expt_names = list(self.annotation_path_dict.keys())
-        unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
+        if use_annotated_pairs:
+            unannotated_expt_names = annotated_expt_names
+        else:
+            unannotated_expt_names = list(
+                set(all_expt_names) - set(annotated_expt_names)
+            )
         assert all_expt_names
         assert annotated_expt_names
         assert unannotated_expt_names
 
-        pbar = tqdm(
-            misc.list_cartesian_product(annotated_expt_names, unannotated_expt_names)
+        pairs = misc.list_cartesian_product(
+            annotated_expt_names, unannotated_expt_names
         )
+        pairs = [(name1, name2) for name1, name2 in pairs if name1 != name2]
+
+        pbar = tqdm(pairs)
         for ann_expt_name, unann_expt_name in pbar:
             pair_name_msg = (
                 f"(annotated) {ann_expt_name} and (unannotated) {unann_expt_name}"
@@ -150,11 +158,22 @@ class BehaviorEmbedding(BehaviorMixin):
             )
 
             unann_expt_path = self.expt_path_dict[unann_expt_name]
-            unann_embedding_name = f"semisupervised_pair_embedding_{ann_expt_name}"
+            embedding_type = "semisupervised_pair_embedding"
+            if use_annotated_pairs:
+                unann_embedding_name = (
+                    f"{ann_expt_name}_{embedding_type}_{unann_expt_name}"
+                )
+            else:
+                unann_embedding_name = f"{embedding_type}_{ann_expt_name}"
             self._update_expt_record(unann_expt_path, unann_embedding_name)
 
             ann_expt_path = self.expt_path_dict[ann_expt_name]
-            ann_embedding_name = f"semisupervised_pair_embedding_{unann_expt_name}"
+            if use_annotated_pairs:
+                ann_embedding_name = (
+                    f"{ann_expt_name}_{embedding_type}_{unann_expt_name}"
+                )
+            else:
+                ann_embedding_name = f"{embedding_type}_{unann_expt_name}"
             self._update_expt_record(ann_expt_path, ann_embedding_name)
 
             embedding, expt_indices_dict = self.compute_behavior_embedding(

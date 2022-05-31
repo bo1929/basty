@@ -134,11 +134,12 @@ if __name__ == "__main__":
     UMAP_kwargs["embedding_n_components"] = 2
     UMAP_kwargs["embedding_metric"] = "hellinger"
     UMAP_kwargs["embedding_low_memory"] = True
-    use_annotations_to_mask = True
+    use_annotations_to_mask = False
     embedding_kwargs = {
         **UMAP_kwargs,
         "use_annotations_to_mask": use_annotations_to_mask,
     }
+    use_annotated_pairs = True
 
     HDBSCAN_kwargs = {}
     HDBSCAN_kwargs["prediction_data"] = True
@@ -152,7 +153,11 @@ if __name__ == "__main__":
     mapping_postprocessing_kwargs = {}
     behavior_correspondence_kwargs = {}
 
-    log_params(args.main_cfg_path, "embedding", embedding_kwargs)
+    log_params(
+        args.main_cfg_path,
+        "embedding",
+        {**embedding_kwargs, "use_annotated_pairs": use_annotated_pairs},
+    )
     log_params(args.main_cfg_path, "clustering", clustering_kwargs)
     log_params(
         args.main_cfg_path, "behavior_correspondence", behavior_correspondence_kwargs
@@ -181,7 +186,9 @@ if __name__ == "__main__":
         behavior_mapper.compute_unsupervised_joint_embeddings()
 
     if args.compute_semisupervised_pair_embeddings:
-        behavior_mapper.compute_semisupervised_pair_embeddings()
+        behavior_mapper.compute_semisupervised_pair_embeddings(
+            use_annotated_pairs=use_annotated_pairs
+        )
 
     # Clustering related procedures.
     if args.jointly_cluster_supervised_joint:
