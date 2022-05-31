@@ -54,8 +54,8 @@ if __name__ == "__main__":
     if args.reset_project:
         backup_old_project(args.main_cfg_path)
 
-    extract_delta = True
-    extract_snap = True
+    compute_delta = True
+    compute_snap = True
 
     pose_prep_kwargs = {
         "compute_oriented_pose": True,
@@ -79,8 +79,8 @@ if __name__ == "__main__":
         args.main_cfg_path, **behavioral_reprs_kwargs, **pose_prep_kwargs
     )
     stft_kwargs = {
-        "extract_delta": extract_delta,
-        "extract_snap": extract_snap,
+        "delta": compute_delta,
+        "snap": compute_snap,
     }
 
     log_params(args.main_cfg_path, "pose_prep", pose_prep_kwargs)
