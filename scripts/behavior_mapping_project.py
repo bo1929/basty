@@ -152,7 +152,11 @@ if __name__ == "__main__":
     mapping_postprocessing_kwargs = {}
     behavior_correspondence_kwargs = {}
 
-    log_params(args.main_cfg_path, "embedding", embedding_kwargs)
+    log_params(
+        args.main_cfg_path,
+        "embedding",
+        embedding_kwargs,
+    )
     log_params(args.main_cfg_path, "clustering", clustering_kwargs)
     log_params(
         args.main_cfg_path, "behavior_correspondence", behavior_correspondence_kwargs

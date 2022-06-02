@@ -66,18 +66,21 @@ if __name__ == "__main__":
         "threshold_idx": 1,
     }
     active_bouts_supervised_kwargs = {
-        "n_estimators": 5,
+        "n_estimators": 10,
         "max_depth": 5,
         "min_samples_leaf": 10 ** 3,
         "max_features": "sqrt",
         "criterion": "gini",
         "class_weight": "balanced",
-        "label_conversion_dict": {},
+        "label_conversion_dict": {
+            0: ["Idle&Other", "HaltereSwitch", "Noise"],
+            1: ["Grooming", "ProboscisPump", "Moving", "Feeding"],
+        },
     }
     active_bouts_kwargs = {
         "datums_list": [[]],
         "datums_winsize": FPS // 10,
-        "scale": True,
+        "scale": False,
         "log_scale": True,
         "coefs_summary_method": "sum",
         "post_processing_winsize": FPS,
@@ -86,7 +89,12 @@ if __name__ == "__main__":
         **active_bouts_supervised_kwargs,
         **active_bouts_unsupervised_kwargs,
     }
-    log_params(args.main_cfg_path, "active_bouts", active_bouts_kwargs)
+
+    log_params(
+        args.main_cfg_path,
+        "active_bouts",
+        active_bouts_kwargs,
+    )
 
     if args.outline_active_bouts or args.outline_all:
         active_bouts = ExptActiveBouts(args.main_cfg_path, **active_bouts_kwargs)
