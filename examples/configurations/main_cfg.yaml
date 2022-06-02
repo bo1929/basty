@@ -1,3 +1,5 @@
+# Use this to evaluate the performance of the pipeline with annotated experiments.
+evaluation_mode: False
 # Please always use absolute paths in this configuration file.
 project_path: "./project-test"
 

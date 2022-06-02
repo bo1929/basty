@@ -89,14 +89,13 @@ if __name__ == "__main__":
         **active_bouts_supervised_kwargs,
         **active_bouts_unsupervised_kwargs,
     }
-    use_annotated_pairs = True
 
     log_params(
         args.main_cfg_path,
         "active_bouts",
-        {**active_bouts_kwargs, "use_annotated_pairs": use_annotated_pairs},
+        active_bouts_kwargs,
     )
 
     if args.outline_active_bouts or args.outline_all:
         active_bouts = ExptActiveBouts(args.main_cfg_path, **active_bouts_kwargs)
-        active_bouts.outline_active_bouts(use_annotated_pairs=use_annotated_pairs)
+        active_bouts.outline_active_bouts()

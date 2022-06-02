@@ -4,9 +4,10 @@ import joblib as jl
 import numpy as np
 
 import basty.project.experiment_processing as experiment_processing
+import basty.utils.io as io
 
 parser = argparse.ArgumentParser(
-    description="Report details about active and dormant masks."
+    description="Evaluate and report details about active and dormant masks."
 )
 parser.add_argument(
     "--main-cfg-path",
@@ -20,10 +21,6 @@ parser.add_argument(
 )
 parser.add_argument(
     "--evaluate-dormant-epochs",
-    action=argparse.BooleanOptionalAction,
-)
-parser.add_argument(
-    "--silent",
     action=argparse.BooleanOptionalAction,
 )
 args = parser.parse_args()
@@ -149,9 +146,10 @@ def evaluate_predicted_masks(
     project_obj,
     evaluate_active_bouts=False,
     evaluate_dormant_epochs=False,
-    verbose=True,
 ):
     all_expt_names = list(project_obj.expt_path_dict.keys())
+    results_dir = project_obj.project_path / "results" / "experiment_outlining"
+    evaluations_dir = results_dir / "evaluations"
 
     for expt_name in all_expt_names:
         expt_path = project_obj.expt_path_dict[expt_name]
@@ -191,9 +189,10 @@ def evaluate_predicted_masks(
                 )
                 report += get_evaluation_report(evaluation_dict, behavior_domain)
             report += "============================================================\n"
-
-        if verbose:
-            print(report)
+            io.safe_create_dir(evaluations_dir)
+            io.write_txt(report, evaluations_dir / f"{expt_name}.txt")
+        else:
+            print(f"{expt_name} does not have annotations, skipping...")
 
 
 if __name__ == "__main__":
@@ -204,5 +203,4 @@ if __name__ == "__main__":
         project,
         evaluate_active_bouts=args.evaluate_active_bouts,
         evaluate_dormant_epochs=args.evaluate_dormant_epochs,
-        verbose=not args.silent,
     )

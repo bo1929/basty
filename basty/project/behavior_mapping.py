@@ -130,15 +130,13 @@ class BehaviorEmbedding(BehaviorMixin):
         return embedding, expt_indices_dict
 
     @misc.timeit
-    def compute_semisupervised_pair_embeddings(self, use_annotated_pairs=False):
+    def compute_semisupervised_pair_embeddings(self):
         all_expt_names = list(self.expt_path_dict.keys())
         annotated_expt_names = list(self.annotation_path_dict.keys())
-        if use_annotated_pairs:
+        unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
+        if self.evaluation_mode:
             unannotated_expt_names = annotated_expt_names
-        else:
-            unannotated_expt_names = list(
-                set(all_expt_names) - set(annotated_expt_names)
-            )
+
         assert all_expt_names
         assert annotated_expt_names
         assert unannotated_expt_names
@@ -157,23 +155,14 @@ class BehaviorEmbedding(BehaviorMixin):
                 f"Computing semisupervised embeddding for {pair_name_msg}"
             )
 
-            unann_expt_path = self.expt_path_dict[unann_expt_name]
             embedding_type = "semisupervised_pair_embedding"
-            if use_annotated_pairs:
-                unann_embedding_name = (
-                    f"{ann_expt_name}_{embedding_type}_{unann_expt_name}"
-                )
-            else:
-                unann_embedding_name = f"{embedding_type}_{ann_expt_name}"
+
+            unann_expt_path = self.expt_path_dict[unann_expt_name]
+            unann_embedding_name = f"{embedding_type}_{ann_expt_name}_{unann_expt_name}"
             self._update_expt_record(unann_expt_path, unann_embedding_name)
 
             ann_expt_path = self.expt_path_dict[ann_expt_name]
-            if use_annotated_pairs:
-                ann_embedding_name = (
-                    f"{ann_expt_name}_{embedding_type}_{unann_expt_name}"
-                )
-            else:
-                ann_embedding_name = f"{embedding_type}_{unann_expt_name}"
+            ann_embedding_name = f"{embedding_type}_{ann_expt_name}_{unann_expt_name}"
             self._update_expt_record(ann_expt_path, ann_embedding_name)
 
             embedding, expt_indices_dict = self.compute_behavior_embedding(
@@ -474,17 +463,17 @@ class BehaviorClustering(BehaviorMixin):
         embedding_expt_dict = defaultdict()
         expt_indices_dict = defaultdict(tuple)
 
-        for idx1, expt_name1 in enumerate(expt_names1):
-            embedding_name1 = embedding_names1[idx1]
+        for idx, expt_name in enumerate(expt_names1):
+            embedding_name1 = embedding_names1[idx]
+            for idx1, expt_name1 in enumerate(expt_names1[(idx + 1) :]):
+                embedding_name11 = embedding_names1[idx1]
+                assert self.is_compatible_approach(
+                    expt_name, embedding_name1, expt_name1, embedding_name11
+                )
             for idx2, expt_name2 in enumerate(expt_names2):
                 embedding_name2 = embedding_names2[idx2]
                 assert self.is_compatible_approach(
-                    expt_name1, embedding_name1, expt_name2, embedding_name2
-                )
-            for idx11, expt_name11 in enumerate(expt_names1[idx1 + 1 :]):
-                embedding_name11 = embedding_names1[idx11]
-                assert self.is_compatible_approach(
-                    expt_name1, embedding_name1, expt_name11, embedding_name11
+                    expt_name, embedding_name1, expt_name2, embedding_name2
                 )
 
         prev = 0
@@ -527,14 +516,14 @@ class BehaviorClustering(BehaviorMixin):
             self._save_numpy_array(
                 cluster_membership_expt,
                 expt_path / "clusterings",
-                f"membership_crosswise_cluster_{embedding_name}_{clustered_expt_names}.npy",
+                f"membership_crosswise_cluster_{clustered_expt_names}_{embedding_name}.npy",
                 depth=3,
             )
             cluster_labels_expt = cluster_labels[start:end]
             self._save_numpy_array(
                 cluster_labels_expt,
                 expt_path / "clusterings",
-                f"labels_crosswise_cluster_{embedding_name}_{clustered_expt_names}.npy",
+                f"labels_crosswise_cluster_{clustered_expt_names}_{embedding_name}.npy",
                 depth=3,
             )
 
@@ -560,7 +549,7 @@ class BehaviorClustering(BehaviorMixin):
             self._save_numpy_array(
                 cluster_membership_expt,
                 expt_path / "clusterings",
-                f"membership_crosswise_cluster_{embedding_name}_{clustered_expt_names}.npy",
+                f"membership_crosswise_cluster_{clustered_expt_names}_{embedding_name}.npy",
                 depth=3,
             )
             # cluster_labels_expt = (
@@ -570,7 +559,7 @@ class BehaviorClustering(BehaviorMixin):
             self._save_numpy_array(
                 cluster_labels_expt,
                 expt_path / "clusterings",
-                f"labels_crosswise_cluster_{embedding_name}_{clustered_expt_names}.npy",
+                f"labels_crosswise_cluster_{clustered_expt_names}_{embedding_name}.npy",
                 depth=3,
             )
 
@@ -583,8 +572,9 @@ class BehaviorClustering(BehaviorMixin):
         for ann_expt_name, unann_expt_name in misc.list_cartesian_product(
             annotated_expt_names, unannotated_expt_names
         ):
-            ann_embedding_name = f"semisupervised_pair_embedding_{unann_expt_name}"
-            unann_embedding_name = f"semisupervised_pair_embedding_{ann_expt_name}"
+            embedding_type = "semisupervised_pair_embedding"
+            ann_embedding_name = f"{embedding_type}_{ann_expt_name}_{unann_expt_name}"
+            unann_embedding_name = f"{embedding_type}_{ann_expt_name}_{unann_expt_name}"
             self.crosswisely_cluster(
                 [ann_expt_name],
                 [unann_expt_name],
@@ -684,7 +674,9 @@ class BehaviorCorrespondence(BehaviorMixin):
             misc.list_cartesian_product(annotated_expt_names, unannotated_expt_names)
         )
         for ann_expt_name, unann_expt_name in pbar:
-            embedding_name = f"semisupervised_pair_embedding_{unann_expt_name}"
+            embedding_name = (
+                f"semisupervised_pair_embedding_{ann_expt_name}_{unann_expt_name}"
+            )
             clustering_name = f"disparate_cluster_{embedding_name}"
             pbar.set_description(
                 f"Mapping cluster labels of {clustering_name} to behavior labels"
@@ -748,7 +740,9 @@ class BehaviorCorrespondence(BehaviorMixin):
             misc.list_cartesian_product(annotated_expt_names, unannotated_expt_names)
         )
         for ann_expt_name, unann_expt_name in pbar:
-            embedding_name = f"semisupervised_pair_embedding_{unann_expt_name}"
+            embedding_name = (
+                f"semisupervised_pair_embedding_{ann_expt_name}_{unann_expt_name}"
+            )
             clustering_name = f"joint_cluster_{embedding_name}"
             pbar.set_description(
                 f"Mapping cluster labels of {clustering_name} to behavior labels"
@@ -788,8 +782,10 @@ class BehaviorCorrespondence(BehaviorMixin):
             misc.list_cartesian_product(annotated_expt_names, unannotated_expt_names)
         )
         for ann_expt_name, unann_expt_name in pbar:
-            embedding_name1 = f"semisupervised_pair_embedding_{unann_expt_name}"
-            clustering_name = f"crosswise_cluster_{embedding_name1}_{ann_expt_name}"
+            embedding_name = (
+                f"semisupervised_pair_embedding_{ann_expt_name}_{unann_expt_name}"
+            )
+            clustering_name = f"crosswise_cluster_{ann_expt_name}_{embedding_name}"
             pbar.set_description(
                 f"Mapping cluster labels of {clustering_name} to behavior labels"
             )
@@ -954,13 +950,17 @@ class BehaviorCorrespondence(BehaviorMixin):
         for ann_expt_name, unann_expt_name in misc.list_cartesian_product(
             annotated_expt_names, unannotated_expt_names
         ):
-            ann_embedding_name = f"semisupervised_pair_embedding_{unann_expt_name}"
-            unann_embedding_name = f"semisupervised_pair_embedding_{ann_expt_name}"
+            ann_embedding_name = (
+                f"semisupervised_pair_embedding_{ann_expt_name}_{unann_expt_name}"
+            )
+            unann_embedding_name = (
+                f"semisupervised_pair_embedding_{ann_expt_name}_{ann_expt_name}"
+            )
             ann_clustering_name = (
-                f"crosswise_cluster_{ann_embedding_name}_{ann_expt_name}"
+                f"crosswise_cluster_{ann_expt_name}_{ann_embedding_name}"
             )
             unann_clustering_name = (
-                f"crosswise_cluster_{unann_embedding_name}_{ann_expt_name}"
+                f"crosswise_cluster_{ann_expt_name}_{unann_embedding_name}"
             )
             self.crosswisely_compute_behavior_score(
                 [ann_expt_name],

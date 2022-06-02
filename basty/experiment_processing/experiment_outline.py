@@ -145,6 +145,16 @@ class SummaryCoefsCWT:
 
 class ActiveBouts(OutlineThresholdGMM, OutlineRandomForestClassifier, SummaryCoefsCWT):
     @classmethod
+    def get_default_training_labels(y_train, y_ann, expt_record):
+        inactive_label, noise_label = (
+            expt_record.behavior_to_label[expt_record.inactive_annotation],
+            expt_record.behavior_to_label[expt_record.noise_annotation],
+        )
+        y_train[y_ann != inactive_label] += 1
+        y_train[y_ann == noise_label] += 1
+        return y_train
+
+    @classmethod
     def compute_active_bouts(cls, X, thresholds, winsize=30, wintype="boxcar"):
         assert isinstance(X, np.ndarray) and X.ndim == 2
         assert len(thresholds) == X.shape[1]
@@ -188,6 +198,16 @@ class ActiveBouts(OutlineThresholdGMM, OutlineRandomForestClassifier, SummaryCoe
 
 class DormantEpochs(OutlineThresholdGMM, OutlineRandomForestClassifier):
     label_to_name = {0: "Dormant", 1: "Arouse", -1: "Betwixt"}
+
+    @classmethod
+    def get_default_training_labels(y_train, y_ann, expt_record):
+        arouse_label, noise_label = (
+            expt_record.behavior_to_label[expt_record.arouse_annotation],
+            expt_record.behavior_to_label[expt_record.noise_annotation],
+        )
+        y_train[np.logical_or(y_ann == arouse_label, y_ann == noise_label)] += 1
+        y_train[y_ann == noise_label] += 1
+        return y_train
 
     @classmethod
     def compute_dormant_epochs(
