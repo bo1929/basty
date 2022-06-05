@@ -29,12 +29,12 @@ parser.add_argument(
     help="Number of neighbors to use in kNN algorithm.",
 )
 parser.add_argument(
-    "--weighting",
+    "--neighbor-weights",
     type=str,
     choices=["distance", "sq_distance"],
 )
 parser.add_argument(
-    "--normalize-weights",
+    "--neighbor-weights-norm",
     type=str,
     choices=["count", "log_count", "sqrt_count", "proportion"],
 )
@@ -44,14 +44,15 @@ parser.add_argument(
     choices=["softmax", "standard"],
 )
 parser.add_argument(
-    "--use-entropy",
-    default=False,
-    action=argparse.BooleanOptionalAction,
+    "--voting-weights",
+    type=str,
+    choices=["entropy", "uncertainity"],
 )
 parser.add_argument(
-    "--hard-vote",
-    default=False,
-    action=argparse.BooleanOptionalAction,
+    "--voting",
+    type=str,
+    default="soft",
+    choices=["hard", "soft"],
 )
 parser.add_argument(
     "--save_weights",
@@ -90,18 +91,16 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
 
     results_dir = project_obj.project_path / "results" / "semisupervised_pair_kNN"
 
-    weighting = kwargs.get("weighting", None)
-    normalize_weights = kwargs.get("normalize_weights", None)
-    num_neigh = kwargs.get("num_neighbors", 10)
+    num_neighbors = kwargs.get("num_neighbors", 10)
+    neighbor_weights = kwargs.get("neighbor_weights", None)
+    neighbor_weights_norm = kwargs.get("neighbor_weights_norm", None)
     activation = kwargs.get("activation", None)
-    use_entropy = kwargs.get("use_entropy", False)
 
     name_predictions = "predictions"
-    name_predictions += f".weighting-{weighting}"
-    name_predictions += f".wnorm-{normalize_weights}"
-    name_predictions += f".{num_neigh}NN"
+    name_predictions += f".{num_neighbors}NN"
+    name_predictions += f".neighbor_weights-{neighbor_weights}"
+    name_predictions += f".neighbor_weights_norm-{neighbor_weights_norm}"
     name_predictions += f".activation-{activation}"
-    name_predictions += f".entropy-{use_entropy}"
 
     for expt_name_ann, expt_name_unann in pairs:
         print(f"{expt_name_ann} predicts {expt_name_unann}.")
@@ -144,13 +143,13 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
         else:
             raise ValueError
 
-        neigh = KNeighborsClassifier(n_neighbors=num_neigh, weights="distance")
+        neigh = KNeighborsClassifier(n_neighbors=num_neighbors, weights="distance")
         neigh.fit(X_ann, y_true_ann)
 
         distances, n_neighbors = neigh.kneighbors(X_unann)
-        if weighting == "distance":
+        if neighbor_weights == "distance":
             weights = 1 / distances
-        elif weighting == "sq_distance":
+        elif neighbor_weights == "sq_distance":
             weights = 1 / distances ** 2
         else:
             weights = np.ones(distances.shape)
@@ -163,18 +162,18 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
             for j in range(neighbors_labels.shape[1]):
                 w_pred_unann[i, neighbors_labels[i, j]] += weights[i, j]
 
-        if normalize_weights is not None:
+        if neighbor_weights_norm is not None:
             uniq_true_ann, counts_true_ann = np.unique(y_true_ann, return_counts=True)
             counts_true_ann += 1
             proportions_true_ann = counts_true_ann / y_true_ann.shape[0]
             for idx, label in enumerate(uniq_true_ann):
-                if normalize_weights == "count":
+                if neighbor_weights_norm == "count":
                     denom = counts_true_ann[idx]
-                elif normalize_weights == "log_count":
+                elif neighbor_weights_norm == "log_count":
                     denom = np.log2(counts_true_ann[idx])
-                elif normalize_weights == "sqrt_count":
+                elif neighbor_weights_norm == "sqrt_count":
                     denom = np.sqrt(counts_true_ann[idx])
-                elif normalize_weights == "proportion":
+                elif neighbor_weights_norm == "proportion":
                     denom = proportions_true_ann[idx]
                 else:
                     denom = 1
@@ -186,13 +185,6 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
             w_pred_unann = normalize(w_pred_unann, norm="l1")
         else:
             w_pred_unann = w_pred_unann
-
-        if use_entropy:
-            entropy_pred_unann = entropy(w_pred_unann, axis=1, base=2)
-            max_entropy = entropy(
-                [1 / num_of_labels for _ in range(num_of_labels)], base=2
-            )
-            w_pred_unann *= max_entropy - entropy_pred_unann.reshape(-1, 1)
 
         annotations_w_pred_unann = np.zeros((unann_num_of_frames, num_of_labels))
         annotations_w_pred_unann[mask_active_unann, :] = w_pred_unann
@@ -209,7 +201,8 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
                 **total_weight_dict[expt_name_unann],
             )
 
-    hard_vote = kwargs.get("hard_vote", False)
+    voting = kwargs.get("voting", "soft")
+    voting_weights = kwargs.get("voting_weights", None)
     majority_window_size = kwargs.get("majority_window_size", 0)
     min_short_duration = kwargs.get("min_short_duration", 0)
     max_long_duration = kwargs.get("max_long_duration", 0)
@@ -224,7 +217,8 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
     ]
 
     name_annotations = "annotations"
-    name_annotations += f".hard_vote-{hard_vote}"
+    name_annotations += f".voting-{voting}"
+    name_annotations += f".voting_weights-{voting_weights}"
     name_annotations += f".majority_ws-{majority_window_size}"
     name_annotations += f".min_short-{min_short_duration}"
     name_annotations += f".max_long-{max_long_duration}"
@@ -242,15 +236,39 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
 
         total_weights = list(total_weight_dict[expt_name_unann].values())
 
-        if hard_vote:
-            annotations_vt_pred_unann = np.zeros((unann_num_of_frames, num_of_labels))
-            for i in range(len(total_weights)):
-                ami = np.argmax(total_weights[i], axis=1)
-                annotations_vt_pred_unann[np.arange(ami.shape[0]), ami] += 1
-            annotations_pred_unann = np.argmax(annotations_vt_pred_unann, axis=1)
+        def get_hard_votes(w_pred_unann):
+            v_pred_unann = np.zeros((unann_num_of_frames, num_of_labels))
+            ami = np.argmax(w_pred_unann, axis=1)
+            v_pred_unann[np.arange(ami.shape[0]), ami] += 1
+            return v_pred_unann
+
+        def entropy_weighting(w_pred_unann):
+            entropy_pred_unann = entropy(w_pred_unann, axis=1, base=2)
+            max_entropy = entropy(
+                [1 / num_of_labels for _ in range(num_of_labels)], base=2
+            )
+            return w_pred_unann * (max_entropy - entropy_pred_unann.reshape(-1, 1))
+
+        def uncertainity_weighting(w_pred_unann):
+            uncertainity_pred_unann = np.max(w_pred_unann, axis=1)
+            return w_pred_unann * uncertainity_pred_unann.reshape(-1, 1)
+
+        if voting == "hard":
+            total_weights = list(map(get_hard_votes, total_weights))
+        elif voting == "soft":
+            total_weights = total_weights
         else:
-            annotations_wt_pred_unann = np.sum(total_weights, axis=0)
-            annotations_pred_unann = np.argmax(annotations_wt_pred_unann, axis=1)
+            raise ValueError
+
+        if voting_weights == "entropy":
+            total_weights = list(map(entropy_weighting, total_weights))
+        elif voting_weights == "uncertainity":
+            total_weights = list(map(uncertainity_weighting, total_weights))
+        else:
+            total_weights = total_weights
+
+        annotations_wt_pred_unann = np.sum(total_weights, axis=0)
+        annotations_pred_unann = np.argmax(annotations_wt_pred_unann, axis=1)
 
         annotations_pred_unann = PostProcessing.compute_window_majority(
             annotations_pred_unann,
@@ -278,11 +296,11 @@ if __name__ == "__main__":
 
     prediction_kwargs = {
         "num_neighbors": args.num_neighbors,
-        "weighting": args.weighting,
-        "normalize_weights": args.normalize_weights,
+        "neighbor_weights": args.neighbor_weights,
+        "neighbor_weights_norm": args.neighbor_weights_norm,
         "activation": args.activation,
-        "use_entropy": args.use_entropy,
-        "hard_vote": args.hard_vote,
+        "voting": args.voting,
+        "voting_weights": args.voting_weights,
     }
     postprocessing_kwargs = {
         "majority_window_size": int(project.fps * 3),

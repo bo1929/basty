@@ -74,29 +74,28 @@ def get_bout_details_report(y_true, y_pred, behavior_to_label):
         number_of_bouts_pred, duration_of_bouts_pred, label_to_behavior
     )
 
+    def check_intersection(start_ref, end_ref, intervals):
+        is_intersected = False
+        start, end = next(intervals, (np.inf, np.inf))
+        while (not is_intersected) and (start >= end_ref):
+            cond1 = start >= start_ref and start <= end_ref
+            cond2 = start_ref >= start and start_ref <= end
+            is_intersected = cond1 or cond2
+            if start >= end_ref:
+                break
+            start, end = next(intervals)
+        return is_intersected
+
     def compute_intersection_score(interval_of_bouts_1, interval_of_bouts_2):
         intersection_score_dict = {}
         for label, intervals_1 in interval_of_bouts_1.items():
             intersect_indicators = []
             intervals_2 = interval_of_bouts_2[label]
             for start_1, end_1 in intervals_1:
-                for start_2, end_2 in intervals_2:
-                    if start_2 >= start_1 and start_2 <= end_1:
-                        found = True
-                        break
-                    elif start_1 >= start_2 and start_1 <= end_2:
-                        found = True
-                        break
-                    elif start_2 >= end_1:
-                        found = False
-                        break
-                    else:
-                        found = False
-                intersect_indicators.append(found)
-            if not intersection_score_dict:
-                intersection_score_dict[label] = np.mean(intersect_indicators)
-            else:
-                intersection_score_dict[label] = 0
+                intersect_indicators.append(
+                    check_intersection(start_1, end_1, iter(intervals_2))
+                )
+            intersection_score_dict[label] = np.mean(intersect_indicators)
         return intersection_score_dict
 
     recall_intersection_dict = compute_intersection_score(
