@@ -341,7 +341,7 @@ class ExptDormantEpochs(Project, ExptOutline):
             )
 
 
-class ExptActiveBouts(Project):
+class ExptActiveBouts(Project, ExptOutline):
     def __init__(self, main_cfg_path, use_supervised_learning=False, **kwargs):
         Project.__init__(self, main_cfg_path, **kwargs)
         self.use_supervised_learning = use_supervised_learning
