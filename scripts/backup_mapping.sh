@@ -1,7 +1,12 @@
 #!/bin/bash
 PROJECT_DIRECTORY_PATH="${1}"
 DATE="$(date +%s)"
-BACKUP_DIR_PATH="${PROJECT_DIRECTORY_PATH}/backup-${DATE}"
+NAME="${2-}"
+if [[ -n "${NAME}" ]]; then
+  NAME="-${NAME}"
+fi
+
+BACKUP_DIR_PATH="${PROJECT_DIRECTORY_PATH}/backup-${DATE}${NAME}"
 mkdir ${BACKUP_DIR_PATH}
 
 declare -a include_array=( \ 
