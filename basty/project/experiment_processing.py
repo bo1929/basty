@@ -435,7 +435,7 @@ class ExptActiveBouts(Project, ExptOutline):
                     self.logger.direct_info(
                         "Training the decision tree for active bouts."
                     )
-                    training_expt_names = annotated_expt_names
+                    training_expt_names = annotated_expt_names[:]
                     training_expt_names.remove(expt_name)
                     X_train_list, y_train_list = self.get_training_data(
                         X_expt_dict,
