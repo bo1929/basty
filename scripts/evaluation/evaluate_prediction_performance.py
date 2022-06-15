@@ -77,13 +77,11 @@ def get_bout_details_report(y_true, y_pred, behavior_to_label):
     def check_intersection(start_ref, end_ref, intervals):
         is_intersected = False
         start, end = next(intervals, (np.inf, np.inf))
-        while (not is_intersected) and (start >= end_ref):
+        while (not is_intersected) and (start < end_ref):
             cond1 = start >= start_ref and start <= end_ref
-            cond2 = start_ref >= start and start_ref <= end
+            cond2 = end >= start_ref and end <= end_ref
             is_intersected = cond1 or cond2
-            if start >= end_ref:
-                break
-            start, end = next(intervals)
+            start, end = next(intervals, (np.inf, np.inf))
         return is_intersected
 
     def compute_intersection_score(interval_of_bouts_1, interval_of_bouts_2):
