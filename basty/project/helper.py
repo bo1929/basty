@@ -132,7 +132,13 @@ class ParameterHandler:
         self.UMAP_kwargs["n_components"] = kwargs.pop("embedding_n_components", 2)
         self.UMAP_kwargs["metric"] = kwargs.pop("embedding_metric", "hellinger")
         self.UMAP_kwargs["low_memory"] = kwargs.pop("embedding_low_memory", True)
-        self.use_annotations_to_mask = kwargs.pop("use_annotations_to_mask", False)
+        self.use_annotations_to_mask = kwargs.pop(
+            "use_annotations_to_mask", (False, False)
+        )
+        assert (
+            isinstance(self.use_annotations_to_mask, tuple)
+            and len(self.use_annotations_to_mask) == 2
+        )
 
     def init_behavior_clustering_kwargs(self, **kwargs):
         self.HDBSCAN_kwargs = {}

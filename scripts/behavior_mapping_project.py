@@ -128,13 +128,13 @@ args = parser.parse_args()
 
 if __name__ == "__main__":
     UMAP_kwargs = {}
-    UMAP_kwargs["embedding_n_neighbors"] = 75
+    UMAP_kwargs["embedding_n_neighbors"] = 90
     UMAP_kwargs["embedding_min_dist"] = 0.0
     UMAP_kwargs["embedding_spread"] = 1.0
     UMAP_kwargs["embedding_n_components"] = 2
     UMAP_kwargs["embedding_metric"] = "hellinger"
     UMAP_kwargs["embedding_low_memory"] = True
-    use_annotations_to_mask = True
+    use_annotations_to_mask = (True, False)
     embedding_kwargs = {
         **UMAP_kwargs,
         "use_annotations_to_mask": use_annotations_to_mask,
