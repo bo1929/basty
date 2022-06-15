@@ -143,7 +143,9 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
         else:
             raise ValueError
 
-        neigh = KNeighborsClassifier(n_neighbors=num_neighbors, weights="distance")
+        neigh = KNeighborsClassifier(
+            n_neighbors=num_neighbors, algorithm="kd_tree", weights="distance"
+        )
         neigh.fit(X_ann, y_true_ann)
 
         distances, n_neighbors = neigh.kneighbors(X_unann)
@@ -188,7 +190,7 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
 
         annotations_w_pred_unann = np.zeros((unann_num_of_frames, num_of_labels))
         annotations_w_pred_unann[mask_active_unann, :] = w_pred_unann
-        annotations_w_pred_unann[mask_arouse_unann, arouse_label] = np.inf
+        annotations_w_pred_unann[mask_arouse_unann, arouse_label] = 1
 
         total_weight_dict[expt_name_unann][expt_name_ann] = annotations_w_pred_unann
 
@@ -226,7 +228,7 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
     annotations_dir = results_dir / name_predictions / name_annotations
     io.safe_create_dir(annotations_dir)
 
-    for expt_name_unann in unannotated_expt_names:
+    for expt_name_unann in total_weight_dict.keys():
         expt_path_unann = project_obj.expt_path_dict[expt_name_unann]
         expt_record_unann = jl.load(expt_path_unann / "expt_record.z")
 
