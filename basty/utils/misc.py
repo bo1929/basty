@@ -72,6 +72,32 @@ def cont_intvls(labels):
     ).astype(int)
 
 
+def generate_bout_report(arr, label_to_name={}, filter_names=[]):
+    bout_intervals = cont_intvls(arr)
+
+    bout_start_list = []
+    bout_finish_list = []
+    name_list = []
+
+    for i in range(bout_intervals.shape[0] - 1):
+        start, finish = bout_intervals[i], bout_intervals[i + 1] - 1
+        name = label_to_name[arr[bout_intervals[i]]]
+
+        if not filter_names or name in filter_names:
+            bout_start_list.append(start)
+            bout_finish_list.append(finish)
+            name_list.append(name)
+
+    report_df = pd.DataFrame(
+        {
+            "Start": bout_start_list,
+            "Finish": bout_finish_list,
+            "Name": name_list,
+        }
+    )
+    return report_df
+
+
 def reverse_dict(x):
     if x is not None:
         reversed_dict = {j: i for i, j in x.items()}

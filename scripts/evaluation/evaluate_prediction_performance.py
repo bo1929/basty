@@ -159,7 +159,7 @@ def get_performance_report(y_true, y_pred, behavior_to_label):
     return report
 
 
-def evaluate_behavioral_predictions(project_obj):
+def evaluate_behavior_predictions(project_obj):
     results_dir = project_obj.project_path / "results" / "semisupervised_pair_kNN"
     for annotations_dir in results_dir.glob("predictions*/annotations*"):
         print(annotations_dir.name)
@@ -200,4 +200,4 @@ if __name__ == "__main__":
         args.main_cfg_path,
     )
 
-    evaluate_behavioral_predictions(project)
+    evaluate_behavior_predictions(project)

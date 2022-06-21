@@ -1,5 +1,4 @@
 import warnings
-from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -138,11 +137,11 @@ class Project(ParameterHandler, LoadingHelper, SavingHelper):
         self.init_annotation_kwargs(**kwargs)
         self.annotation_path_dict = self.main_cfg.get("annotation_paths", {})
 
-        for idx, (name, ann_path) in enumerate(self.annotation_path_dict.items()):
-            expt_path = self.expt_path_dict[name]
+        for idx, (expt_name, ann_path) in enumerate(self.annotation_path_dict.items()):
+            expt_path = self.expt_path_dict[expt_name]
 
             if not (expt_path / "annotations.npy").exists():
-                self.logger.direct_info(f"Processing human annotations of {name}")
+                self.logger.direct_info(f"Processing human annotations of {expt_name}")
 
                 annotator = HumAnn(
                     ann_path,
@@ -155,14 +154,26 @@ class Project(ParameterHandler, LoadingHelper, SavingHelper):
                     assert annotator.behavior_to_label == expt_record.behavior_to_label
                     assert annotator.label_to_behavior == expt_record.label_to_behavior
 
+                expt_record = self._load_joblib_object(expt_path, "expt_record.z")
+                expt_record.has_annotation = True
+
                 y_ann_list = annotator.get_annotations()
                 y_ann = annotator.label_converter(
                     y_ann_list, priority_order=self.annotation_priority
                 )
                 self._save_numpy_array(y_ann, expt_path, "annotations.npy")
 
-                expt_record = self._load_joblib_object(expt_path, "expt_record.z")
-                expt_record.has_annotation = True
+                io.safe_create_dir(expt_path / "annotations")
+                for behavior in expt_record.behavior_to_label.keys():
+                    ann_report_df = misc.generate_bout_report(
+                        y_ann,
+                        label_to_name=expt_record.label_to_behavior,
+                        filter_names=[behavior],
+                    )
+                    ann_report_df.to_csv(
+                        expt_path / "annotations" / f"{expt_name}-{behavior}.csv"
+                    )
+
                 expt_record.inactive_annotation = annotator.inactive_annotation
                 expt_record.noise_annotation = annotator.noise_annotation
                 expt_record.arouse_annotation = annotator.arouse_annotation
