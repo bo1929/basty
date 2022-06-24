@@ -1,13 +1,13 @@
 import argparse
 from pathlib import Path
-from tqdm import tqdm
 
 import joblib as jl
 import numpy as np
+from tqdm import tqdm
 
 import basty.project.experiment_processing as experiment_processing
-import basty.utils.misc as misc
 import basty.utils.io as io
+import basty.utils.misc as misc
 
 parser = argparse.ArgumentParser(description="Report and export predictions as a csv.")
 parser.add_argument(

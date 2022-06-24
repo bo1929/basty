@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import scipy.ndimage.filters as filters
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.mixture import GaussianMixture
+from sklearn.neighbors import KNeighborsClassifier
 
 import basty.utils.misc as misc
 from basty.utils.postprocessing import PostProcessing
@@ -30,9 +30,9 @@ class OutlineMixin(PostProcessing):
         return X
 
 
-class OutlineRandomForestClassifier(OutlineMixin):
+class OutlineClassifier(OutlineMixin):
     def __init__(self, **kwargs):
-        self.clf = RandomForestClassifier(**kwargs)
+        self.clf = KNeighborsClassifier(**kwargs)
         self.is_fitted = False
 
     def fit(self, X_train, y_train):
@@ -42,7 +42,7 @@ class OutlineRandomForestClassifier(OutlineMixin):
     def predict(self, X):
         return self.clf.predict(X)
 
-    def construct_outline_decision_tree(self, X_train_list, y_train_list, **kwargs):
+    def construct_outline_classifier(self, X_train_list, y_train_list, **kwargs):
         assert isinstance(X_train_list, list) and isinstance(y_train_list, list)
         assert len(X_train_list) == len(y_train_list)
         assert all(
@@ -62,7 +62,7 @@ class OutlineRandomForestClassifier(OutlineMixin):
         return self.clf
 
 
-class OutlineThresholdGMM(OutlineMixin):
+class OutlineThreshold(OutlineMixin):
     @staticmethod
     def threshold_detection(X, **kwargs):
         assert isinstance(X, np.ndarray) and X.ndim == 2
@@ -143,7 +143,7 @@ class SummaryCoefsCWT:
         return df
 
 
-class ActiveBouts(OutlineThresholdGMM, OutlineRandomForestClassifier, SummaryCoefsCWT):
+class ActiveBouts(OutlineThreshold, OutlineClassifier, SummaryCoefsCWT):
     @classmethod
     def get_default_training_labels(y_train, y_ann, expt_record):
         inactive_label, noise_label = (
@@ -175,17 +175,15 @@ class ActiveBouts(OutlineThresholdGMM, OutlineRandomForestClassifier, SummaryCoe
         mask_active = final_labels == 1
         return mask_active
 
-    def construct_active_bouts_decision_tree(
-        self, X_train_list, y_train_list, **kwargs
-    ):
-        self.decision_tree = self.construct_outline_decision_tree(
+    def construct_active_bouts_classifier(self, X_train_list, y_train_list, **kwargs):
+        self.classifier = self.construct_outline_classifier(
             X_train_list, y_train_list, **kwargs
         )
 
     def predict_active_bouts(self, X, winsize=30, wintype="boxcar"):
         assert isinstance(X, np.ndarray) and X.ndim == 2
 
-        initial_labels = np.array(self.decision_tree.predict(X))
+        initial_labels = np.array(self.classifier.predict(X))
         intermediate_labels = self.compute_window_majority(
             initial_labels, winsize=winsize, wintype=wintype
         )
@@ -196,7 +194,7 @@ class ActiveBouts(OutlineThresholdGMM, OutlineRandomForestClassifier, SummaryCoe
         return mask_active
 
 
-class DormantEpochs(OutlineThresholdGMM, OutlineRandomForestClassifier):
+class DormantEpochs(OutlineThreshold, OutlineClassifier):
     label_to_name = {0: "Dormant", 1: "Arouse", -1: "Betwixt"}
 
     @classmethod
@@ -250,17 +248,15 @@ class DormantEpochs(OutlineThresholdGMM, OutlineRandomForestClassifier):
         mask_dormant = final_labels == 0
         return mask_dormant, final_labels
 
-    def construct_dormant_epochs_decision_tree(
-        self, X_train_list, y_train_list, **kwargs
-    ):
-        self.decision_tree = self.construct_outline_decision_tree(
+    def construct_dormant_epochs_classifier(self, X_train_list, y_train_list, **kwargs):
+        self.classifier = self.construct_outline_classifier(
             X_train_list, y_train_list, **kwargs
         )
 
     def predict_dormant_epochs(self, X, min_dormant=900, winsize=90, wintype="boxcar"):
         assert isinstance(X, np.ndarray) and X.ndim == 2
 
-        initial_labels = np.array(self.decision_tree.predict(X))
+        initial_labels = np.array(self.classifier.predict(X))
         intermediate_labels = self.compute_window_majority(
             initial_labels, winsize=winsize, wintype=wintype
         )
@@ -271,7 +267,7 @@ class DormantEpochs(OutlineThresholdGMM, OutlineRandomForestClassifier):
         return mask_dormant
 
 
-class OutlineComponentGMM(OutlineMixin):
+class OutlineClustering(OutlineMixin):
     @classmethod
     def get_component(cls, X, num_gmm_comp, component_idx, **kwargs):
         assert isinstance(X, np.ndarray) and X.ndim == 2

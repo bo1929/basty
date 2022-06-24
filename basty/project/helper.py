@@ -72,7 +72,17 @@ class ParameterHandler:
         decision_tree_kwargs["max_features"] = kwargs.pop("max_features", "sqrt")
         decision_tree_kwargs["criterion"] = kwargs.pop("criterion", "gini")
         decision_tree_kwargs["class_weight"] = kwargs.pop("class_weight", "balanced")
+        decision_tree_kwargs["n_jobs"] = kwargs.pop("n_jobs", -1)
         return decision_tree_kwargs
+
+    @staticmethod
+    def nearest_neighbors_default_kwargs(**kwargs):
+        nearest_neighbors_kwargs = {}
+        nearest_neighbors_kwargs["n_neighbors"] = kwargs.pop("n_neighbors", 10)
+        nearest_neighbors_kwargs["weights"] = kwargs.pop("weights", "uniform")
+        nearest_neighbors_kwargs["algorithm"] = kwargs.pop("algorithm", "auto")
+        nearest_neighbors_kwargs["n_jobs"] = kwargs.pop("n_jobs", -1)
+        return nearest_neighbors_kwargs
 
     def init_dormant_epochs_kwargs(self, fps, use_supervised_learning, **kwargs):
         self.datums = kwargs.pop("datums", [])
@@ -98,7 +108,10 @@ class ParameterHandler:
             self.post_processing_wintype = kwargs.pop(
                 "post_processing_wintype", "boxcar"
             )
-            self.decision_tree_kwargs = self.__class__.decision_tree_default_kwargs(
+            # self.classifier_kwargs = self.__class__.decision_tree_default_kwargs(
+            #     **kwargs
+            # )
+            self.classifier_kwargs = self.__class__.nearest_neighbors_default_kwargs(
                 **kwargs
             )
             self.label_conversion_dict = kwargs.pop("label_conversion_dict", {})
@@ -119,7 +132,10 @@ class ParameterHandler:
             # Indices start from 0.
             self.threshold_idx = kwargs.pop("threshold_idx", 1)
         else:
-            self.decision_tree_kwargs = self.__class__.decision_tree_default_kwargs(
+            # self.classifier_kwargs = self.__class__.decision_tree_default_kwargs(
+            #     **kwargs
+            # )
+            self.classifier_kwargs = self.__class__.nearest_neighbors_default_kwargs(
                 **kwargs
             )
             self.label_conversion_dict = kwargs.pop("label_conversion_dict", {})

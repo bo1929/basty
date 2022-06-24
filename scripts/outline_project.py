@@ -31,18 +31,35 @@ args = parser.parse_args()
 
 if __name__ == "__main__":
     FPS = 30
-
     supervised_dormant_epochs = False
+    supervised_active_bouts = True
+    label_conversion_dict = {
+        0: [
+            "Idle&Other",
+            "HaltereSwitch",
+        ],
+        1: [
+            "Feeding",
+            "Grooming",
+            "ProboscisPump",
+            "Moving",
+        ],
+        2: [
+            "Noise",
+        ],
+    }
+
     dormant_epochs_unsupervised_kwargs = {
         "min_dormant": 300 * FPS,
         "num_gmm_comp": 2,
         "threshold_key": "local_max",
+        # Indices start from 0.
         "threshold_idx": 1,
         "epoch_winsize": 180 * FPS,
         "tol_duration": 90 * FPS,
         "tol_percent": 0.4,
     }
-    dormant_epochs_supervised_kwargs = {}
+    dormant_epochs_supervised_kwargs = {"label_conversion_dict": label_conversion_dict}
     dormant_epochs_kwargs = {
         "datums": [],
         "datums_winsize": FPS,
@@ -58,25 +75,13 @@ if __name__ == "__main__":
         dormant_epochs = ExptDormantEpochs(args.main_cfg_path, **dormant_epochs_kwargs)
         dormant_epochs.outline_dormant_epochs()
 
-    supervised_active_bouts = True
     active_bouts_unsupervised_kwargs = {
         "num_gmm_comp": 3,
         "threshold_key": "local_min",
         # Indices start from 0.
         "threshold_idx": 1,
     }
-    active_bouts_supervised_kwargs = {
-        "n_estimators": 10,
-        "max_depth": 5,
-        "min_samples_leaf": 10 ** 3,
-        "max_features": "sqrt",
-        "criterion": "gini",
-        "class_weight": "balanced",
-        "label_conversion_dict": {
-            0: ["Idle&Other", "HaltereSwitch", "Noise"],
-            1: ["Grooming", "ProboscisPump", "Moving", "Feeding"],
-        },
-    }
+    active_bouts_supervised_kwargs = {"label_conversion_dict": label_conversion_dict}
     active_bouts_kwargs = {
         "datums_list": [[]],
         "datums_winsize": FPS // 10,

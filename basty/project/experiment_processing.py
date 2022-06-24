@@ -8,7 +8,7 @@ from tqdm import tqdm
 import basty.utils.io as io
 import basty.utils.misc as misc
 from basty.experiment_processing.experiment_info import ExptRecord
-from basty.experiment_processing.experiment_outline import ActiveBouts, DormantEpochs
+from basty.experiment_processing.experiment_outlining import ActiveBouts, DormantEpochs
 from basty.project.helper import LoadingHelper, Logger, ParameterHandler, SavingHelper
 from basty.utils.annotations import HumanAnnotations as HumAnn
 
@@ -284,7 +284,7 @@ class ExptDormantEpochs(Project, ExptOutline):
 
         if self.use_supervised_learning and not self.evaluation_mode:
             self.logger.direct_info(
-                "Training the decision tree for dormant bouts with all."
+                "Training the classifier for dormant bouts with all."
             )
             training_expt_names = annotated_expt_names
             X_train_list, y_train_list = self.get_training_data(
@@ -292,8 +292,8 @@ class ExptDormantEpochs(Project, ExptOutline):
                 training_expt_names,
                 DormantEpochs.get_default_training_labels,
             )
-            dormant_epochs.construct_dormant_epochs_decision_tree(
-                X_train_list, y_train_list, **self.decision_tree_kwargs
+            dormant_epochs.construct_dormant_epochs_classifier(
+                X_train_list, y_train_list, **self.classifier_kwargs
             )
 
         pbar = tqdm(expt_names)
@@ -307,7 +307,7 @@ class ExptDormantEpochs(Project, ExptOutline):
             if self.use_supervised_learning:
                 if self.evaluation_mode:
                     self.logger.direct_info(
-                        "Training the decision tree for dormant epochs bouts."
+                        "Training the classifier for dormant epochs bouts."
                     )
                     training_expt_names = annotated_expt_names
                     training_expt_names.remove(expt_name)
@@ -316,8 +316,8 @@ class ExptDormantEpochs(Project, ExptOutline):
                         training_expt_names,
                         DormantEpochs.get_default_training_labels,
                     )
-                    dormant_epochs.construct_dormant_epochs_decision_tree(
-                        X_train_list, y_train_list, **self.decision_tree_kwargs
+                    dormant_epochs.construct_dormant_epochs_classifier(
+                        X_train_list, y_train_list, **self.classifier_kwargs
                     )
                 mask_dormant = dormant_epochs.predict_dormant_epochs(
                     X,
@@ -421,7 +421,7 @@ class ExptActiveBouts(Project, ExptOutline):
 
         if self.use_supervised_learning and not self.evaluation_mode:
             self.logger.direct_info(
-                "Training the decision tree for active bouts with all."
+                "Training the classifier for active bouts with all."
             )
             training_expt_names = annotated_expt_names
             X_train_list, y_train_list = self.get_training_data(
@@ -429,8 +429,8 @@ class ExptActiveBouts(Project, ExptOutline):
                 training_expt_names,
                 ActiveBouts.get_default_training_labels,
             )
-            active_bouts.construct_active_bouts_decision_tree(
-                X_train_list, y_train_list, **self.decision_tree_kwargs
+            active_bouts.construct_active_bouts_classifier(
+                X_train_list, y_train_list, **self.classifier_kwargs
             )
 
         pbar = tqdm(expt_names)
@@ -443,9 +443,7 @@ class ExptActiveBouts(Project, ExptOutline):
 
             if self.use_supervised_learning:
                 if self.evaluation_mode:
-                    self.logger.direct_info(
-                        "Training the decision tree for active bouts."
-                    )
+                    self.logger.direct_info("Training the classifier for active bouts.")
                     training_expt_names = annotated_expt_names[:]
                     training_expt_names.remove(expt_name)
                     X_train_list, y_train_list = self.get_training_data(
@@ -453,8 +451,8 @@ class ExptActiveBouts(Project, ExptOutline):
                         training_expt_names,
                         ActiveBouts.get_default_training_labels,
                     )
-                    active_bouts.construct_active_bouts_decision_tree(
-                        X_train_list, y_train_list, **self.decision_tree_kwargs
+                    active_bouts.construct_active_bouts_classifier(
+                        X_train_list, y_train_list, **self.classifier_kwargs
                     )
                 mask_active = active_bouts.predict_active_bouts(
                     X,
