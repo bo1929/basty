@@ -163,17 +163,6 @@ class Project(ParameterHandler, LoadingHelper, SavingHelper):
                 )
                 self._save_numpy_array(y_ann, expt_path, "annotations.npy")
 
-                io.safe_create_dir(expt_path / "annotations")
-                for behavior in expt_record.behavior_to_label.keys():
-                    ann_report_df = misc.generate_bout_report(
-                        y_ann,
-                        label_to_name=expt_record.label_to_behavior,
-                        filter_names=[behavior],
-                    )
-                    ann_report_df.to_csv(
-                        expt_path / "annotations" / f"{expt_name}-{behavior}.csv"
-                    )
-
                 expt_record.inactive_annotation = annotator.inactive_annotation
                 expt_record.noise_annotation = annotator.noise_annotation
                 expt_record.arouse_annotation = annotator.arouse_annotation
@@ -188,6 +177,18 @@ class Project(ParameterHandler, LoadingHelper, SavingHelper):
                 expt_record.mask_annotated = np.logical_and(
                     mask_annotated, np.logical_not(expt_record.mask_noise)
                 )
+
+                io.safe_create_dir(expt_path / "annotations")
+                for behavior in expt_record.behavior_to_label.keys():
+                    ann_report_df = misc.generate_bout_report(
+                        y_ann,
+                        label_to_name=expt_record.label_to_behavior,
+                        filter_names=[behavior],
+                    )
+                    ann_report_df.to_csv(
+                        expt_path / "annotations" / f"{expt_name}-{behavior}.csv"
+                    )
+
                 self._save_joblib_object(
                     expt_record,
                     expt_path,
@@ -202,7 +203,11 @@ class Project(ParameterHandler, LoadingHelper, SavingHelper):
 
 class ExptOutline:
     def get_training_data(
-        self, X_expt_dict, training_expt_names, get_default_training_labels
+        self,
+        X_expt_dict,
+        training_expt_names,
+        get_default_training_labels,
+        mask_training_data,
     ):
         X_train_list = []
         y_train_list = []
@@ -226,8 +231,9 @@ class ExptOutline:
             else:
                 y_train = get_default_training_labels(y_train, y_ann, expt_record)
 
-            X_train_list.append(X_train[expt_record.mask_dormant])
-            y_train_list.append(y_train[expt_record.mask_dormant])
+            X_train, y_train = mask_training_data(X_train, y_train, expt_record)
+            X_train_list.append(X_train)
+            y_train_list.append(y_train)
         return X_train_list, y_train_list
 
 
@@ -291,6 +297,7 @@ class ExptDormantEpochs(Project, ExptOutline):
                 X_expt_dict,
                 training_expt_names,
                 DormantEpochs.get_default_training_labels,
+                DormantEpochs.mask_training_data,
             )
             dormant_epochs.construct_dormant_epochs_classifier(
                 X_train_list, y_train_list, **self.classifier_kwargs
@@ -315,6 +322,7 @@ class ExptDormantEpochs(Project, ExptOutline):
                         X_expt_dict,
                         training_expt_names,
                         DormantEpochs.get_default_training_labels,
+                        DormantEpochs.mask_training_data,
                     )
                     dormant_epochs.construct_dormant_epochs_classifier(
                         X_train_list, y_train_list, **self.classifier_kwargs
@@ -428,6 +436,7 @@ class ExptActiveBouts(Project, ExptOutline):
                 X_expt_dict,
                 training_expt_names,
                 ActiveBouts.get_default_training_labels,
+                ActiveBouts.mask_training_data,
             )
             active_bouts.construct_active_bouts_classifier(
                 X_train_list, y_train_list, **self.classifier_kwargs
@@ -450,6 +459,7 @@ class ExptActiveBouts(Project, ExptOutline):
                         X_expt_dict,
                         training_expt_names,
                         ActiveBouts.get_default_training_labels,
+                        ActiveBouts.mask_training_data,
                     )
                     active_bouts.construct_active_bouts_classifier(
                         X_train_list, y_train_list, **self.classifier_kwargs

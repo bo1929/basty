@@ -62,9 +62,21 @@ class ParameterHandler:
         assert self.norm in ["l1", "l2", "max"]
 
     @staticmethod
+    def gradient_boosting_default_kwargs(**kwargs):
+        gradient_boosting_kwargs = {}
+        gradient_boosting_kwargs["n_estimators"] = kwargs.pop("n_estimators", 10)
+        gradient_boosting_kwargs["max_depth"] = kwargs.pop("max_depth", 5)
+        gradient_boosting_kwargs["min_samples_leaf"] = kwargs.pop(
+            "min_samples_leaf", 10 ** 3
+        )
+        gradient_boosting_kwargs["max_features"] = kwargs.pop("max_features", "sqrt")
+        gradient_boosting_kwargs["criterion"] = kwargs.pop("criterion", "friedman_mse")
+        return gradient_boosting_kwargs
+
+    @staticmethod
     def decision_tree_default_kwargs(**kwargs):
         decision_tree_kwargs = {}
-        decision_tree_kwargs["n_estimators"] = kwargs.pop("n_estimators", 10)
+        decision_tree_kwargs["n_estimators"] = kwargs.pop("n_estimators", 5)
         decision_tree_kwargs["max_depth"] = kwargs.pop("max_depth", 5)
         decision_tree_kwargs["min_samples_leaf"] = kwargs.pop(
             "min_samples_leaf", 10 ** 3
@@ -78,8 +90,8 @@ class ParameterHandler:
     @staticmethod
     def nearest_neighbors_default_kwargs(**kwargs):
         nearest_neighbors_kwargs = {}
-        nearest_neighbors_kwargs["n_neighbors"] = kwargs.pop("n_neighbors", 10)
-        nearest_neighbors_kwargs["weights"] = kwargs.pop("weights", "uniform")
+        nearest_neighbors_kwargs["n_neighbors"] = kwargs.pop("n_neighbors", 50)
+        nearest_neighbors_kwargs["weights"] = kwargs.pop("weights", "distance")
         nearest_neighbors_kwargs["algorithm"] = kwargs.pop("algorithm", "auto")
         nearest_neighbors_kwargs["n_jobs"] = kwargs.pop("n_jobs", -1)
         return nearest_neighbors_kwargs
@@ -108,12 +120,12 @@ class ParameterHandler:
             self.post_processing_wintype = kwargs.pop(
                 "post_processing_wintype", "boxcar"
             )
-            # self.classifier_kwargs = self.__class__.decision_tree_default_kwargs(
-            #     **kwargs
-            # )
-            self.classifier_kwargs = self.__class__.nearest_neighbors_default_kwargs(
+            self.classifier_kwargs = self.__class__.decision_tree_default_kwargs(
                 **kwargs
             )
+            # self.classifier_kwargs = self.__class__.nearest_neighbors_default_kwargs(
+            #     **kwargs
+            # )
             self.label_conversion_dict = kwargs.pop("label_conversion_dict", {})
 
     def init_active_bouts_kwargs(self, fps, use_supervised_learning, **kwargs):
@@ -132,12 +144,12 @@ class ParameterHandler:
             # Indices start from 0.
             self.threshold_idx = kwargs.pop("threshold_idx", 1)
         else:
-            # self.classifier_kwargs = self.__class__.decision_tree_default_kwargs(
-            #     **kwargs
-            # )
-            self.classifier_kwargs = self.__class__.nearest_neighbors_default_kwargs(
+            self.classifier_kwargs = self.__class__.decision_tree_default_kwargs(
                 **kwargs
             )
+            # self.classifier_kwargs = self.__class__.nearest_neighbors_default_kwargs(
+            #     **kwargs
+            # )
             self.label_conversion_dict = kwargs.pop("label_conversion_dict", {})
 
     def init_behavior_embeddings_kwargs(self, **kwargs):

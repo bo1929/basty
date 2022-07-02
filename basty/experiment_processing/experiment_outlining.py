@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 import scipy.ndimage.filters as filters
 from sklearn.mixture import GaussianMixture
-from sklearn.neighbors import KNeighborsClassifier
+
+from sklearn.ensemble import RandomForestClassifier
+# from sklearn.neighbors import KNeighborsClassifier
 
 import basty.utils.misc as misc
 from basty.utils.postprocessing import PostProcessing
@@ -32,15 +34,26 @@ class OutlineMixin(PostProcessing):
 
 class OutlineClassifier(OutlineMixin):
     def __init__(self, **kwargs):
-        self.clf = KNeighborsClassifier(**kwargs)
+        self.clf = RandomForestClassifier(**kwargs)
+        # self.clf = KNeighborsClassifier(**kwargs)
         self.is_fitted = False
+        self.n_samples_per_class = {None: 0}
 
     def fit(self, X_train, y_train):
         self.clf.fit(X_train, y_train)
+        self.n_samples = y_train.shape[0]
+        self.n_samples_per_class = {
+            label: count
+            for label, count in zip(*np.unique(y_train, return_counts=True))
+        }
         self.is_fitted = True
 
     def predict(self, X):
         return self.clf.predict(X)
+        # y_prob = self.clf.predict_proba(X)
+        # for class_label, n_samples in self.n_samples_per_class.items():
+        #     y_prob[:, class_label] /= (np.log2(n_samples+1)+1)
+        # return np.argmax(y_prob, axis=1)
 
     def construct_outline_classifier(self, X_train_list, y_train_list, **kwargs):
         assert isinstance(X_train_list, list) and isinstance(y_train_list, list)
@@ -58,7 +71,7 @@ class OutlineClassifier(OutlineMixin):
         y_train = np.concatenate(y_train_list, axis=0)
 
         self.__init__(**kwargs)
-        self.clf.fit(X_train, y_train)
+        self.fit(X_train, y_train)
         return self.clf
 
 
@@ -145,7 +158,13 @@ class SummaryCoefsCWT:
 
 class ActiveBouts(OutlineThreshold, OutlineClassifier, SummaryCoefsCWT):
     @classmethod
-    def get_default_training_labels(y_train, y_ann, expt_record):
+    def mask_training_data(cls, X_train, y_train, expt_record):
+        X_train = X_train[expt_record.mask_dormant]
+        y_train = y_train[expt_record.mask_dormant]
+        return X_train, y_train
+
+    @classmethod
+    def get_default_training_labels(cls, y_train, y_ann, expt_record):
         inactive_label, noise_label = (
             expt_record.behavior_to_label[expt_record.inactive_annotation],
             expt_record.behavior_to_label[expt_record.noise_annotation],
@@ -176,14 +195,12 @@ class ActiveBouts(OutlineThreshold, OutlineClassifier, SummaryCoefsCWT):
         return mask_active
 
     def construct_active_bouts_classifier(self, X_train_list, y_train_list, **kwargs):
-        self.classifier = self.construct_outline_classifier(
-            X_train_list, y_train_list, **kwargs
-        )
+        self.construct_outline_classifier(X_train_list, y_train_list, **kwargs)
 
     def predict_active_bouts(self, X, winsize=30, wintype="boxcar"):
         assert isinstance(X, np.ndarray) and X.ndim == 2
 
-        initial_labels = np.array(self.classifier.predict(X))
+        initial_labels = np.array(self.predict(X))
         intermediate_labels = self.compute_window_majority(
             initial_labels, winsize=winsize, wintype=wintype
         )
@@ -198,7 +215,11 @@ class DormantEpochs(OutlineThreshold, OutlineClassifier):
     label_to_name = {0: "Dormant", 1: "Arouse", -1: "Betwixt"}
 
     @classmethod
-    def get_default_training_labels(y_train, y_ann, expt_record):
+    def mask_training_data(cls, X_train, y_train, expt_record):
+        return X_train, y_train
+
+    @classmethod
+    def get_default_training_labels(cls, y_train, y_ann, expt_record):
         arouse_label, noise_label = (
             expt_record.behavior_to_label[expt_record.arouse_annotation],
             expt_record.behavior_to_label[expt_record.noise_annotation],
@@ -249,14 +270,12 @@ class DormantEpochs(OutlineThreshold, OutlineClassifier):
         return mask_dormant, final_labels
 
     def construct_dormant_epochs_classifier(self, X_train_list, y_train_list, **kwargs):
-        self.classifier = self.construct_outline_classifier(
-            X_train_list, y_train_list, **kwargs
-        )
+        self.construct_outline_classifier(X_train_list, y_train_list, **kwargs)
 
     def predict_dormant_epochs(self, X, min_dormant=900, winsize=90, wintype="boxcar"):
         assert isinstance(X, np.ndarray) and X.ndim == 2
 
-        initial_labels = np.array(self.classifier.predict(X))
+        initial_labels = np.array(self.predict(X))
         intermediate_labels = self.compute_window_majority(
             initial_labels, winsize=winsize, wintype=wintype
         )

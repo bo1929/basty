@@ -10,18 +10,16 @@ from basty.behavior_mapping.behavioral_windows import BehavioralWindows
 class PostProcessing:
     @staticmethod
     def postprocess_wrt_durations(labels, marker_labels, duration_threshold):
-        if np.abs(duration_threshold) > 1:
+        dur_bool = duration_threshold < -1
+        duration_threshold = np.abs(duration_threshold)
+        if duration_threshold > 1:
             intvls = misc.cont_intvls(labels.astype(int))
             processed_labels = np.empty_like(labels)
-
             for i in range(1, intvls.shape[0]):
                 lbl = labels[intvls[i - 1]]
                 intvl_start, intvl_end = intvls[i - 1], intvls[i]
-                if duration_threshold < -1:
-                    pp_intvl = (intvl_end - intvl_start) > np.abs(duration_threshold)
-                else:
-                    pp_intvl = (intvl_end - intvl_start) < duration_threshold
-                if pp_intvl and lbl in marker_labels:
+                pp_intvl = ((intvl_end - intvl_start) < duration_threshold) != dur_bool
+                if pp_intvl and (lbl in marker_labels):
                     processed_labels[intvl_start:intvl_end] = -1
                 else:
                     processed_labels[intvl_start:intvl_end] = lbl
