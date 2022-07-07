@@ -33,36 +33,36 @@ if __name__ == "__main__":
     FPS = 30
     supervised_dormant_epochs = False
     supervised_active_bouts = True
+
+    dormant_epochs_unsupervised_kwargs = {
+        "min_dormant": 30 * FPS,
+        "num_gmm_comp": 2,
+        "threshold_key": "local_max",
+        # Indices start from 0.
+        "threshold_idx": 1,
+        "epoch_winsize": 90 * FPS,
+        "tol_duration": 30 * FPS,
+        "tol_percent": 0.4,
+    }
     label_conversion_dict = {
         0: [
             "Idle&Other",
             "HaltereSwitch",
-        ],
-        1: [
             "Feeding",
             "Grooming",
             "ProboscisPump",
+        ],
+        1: [
             "Moving",
         ],
         2: [
             "Noise",
         ],
     }
-
-    dormant_epochs_unsupervised_kwargs = {
-        "min_dormant": 300 * FPS,
-        "num_gmm_comp": 2,
-        "threshold_key": "local_max",
-        # Indices start from 0.
-        "threshold_idx": 1,
-        "epoch_winsize": 180 * FPS,
-        "tol_duration": 90 * FPS,
-        "tol_percent": 0.4,
-    }
     dormant_epochs_supervised_kwargs = {"label_conversion_dict": label_conversion_dict}
     dormant_epochs_kwargs = {
         "datums": [],
-        "datums_winsize": FPS,
+        "datums_winsize": FPS // 3,
         "log_scale": False,
         "scale": False,
         "use_supervised_learning": supervised_dormant_epochs,
@@ -81,14 +81,27 @@ if __name__ == "__main__":
         # Indices start from 0.
         "threshold_idx": 1,
     }
+    label_conversion_dict = {
+        0: [
+            "Noise",
+            "Idle&Other",
+            "HaltereSwitch",
+        ],
+        1: [
+            "Feeding",
+            "Grooming",
+            "ProboscisPump",
+            "Moving",
+        ],
+    }
     active_bouts_supervised_kwargs = {"label_conversion_dict": label_conversion_dict}
     active_bouts_kwargs = {
         "datums_list": [[]],
-        "datums_winsize": FPS // 10,
+        "datums_winsize": 0,
         "scale": False,
         "log_scale": True,
         "coefs_summary_method": "sum",
-        "post_processing_winsize": FPS,
+        "post_processing_winsize": int(FPS * 2),
         "post_processing_wintype": "boxcar",
         "use_supervised_learning": supervised_active_bouts,
         **active_bouts_supervised_kwargs,

@@ -159,35 +159,47 @@ class BehaviorEmbedding(BehaviorMixin):
 
             unann_expt_path = self.expt_path_dict[unann_expt_name]
             unann_embedding_name = f"{embedding_type}_{ann_expt_name}_{unann_expt_name}"
-            self._update_expt_record(
-                self.use_annotations_to_mask[1], unann_expt_path, unann_embedding_name
-            )
 
             ann_expt_path = self.expt_path_dict[ann_expt_name]
             ann_embedding_name = f"{embedding_type}_{ann_expt_name}_{unann_expt_name}"
-            self._update_expt_record(
-                self.use_annotations_to_mask[0], ann_expt_path, ann_embedding_name
-            )
 
-            embedding, expt_indices_dict = self.compute_behavior_embedding(
-                [unann_expt_name], [ann_expt_name]
-            )
-            start, end = expt_indices_dict[unann_expt_name]
-            embedding_expt = embedding[start:end]
-            self._save_numpy_array(
-                embedding_expt,
-                unann_expt_path / "embeddings",
-                f"{unann_embedding_name}.npy",
-                depth=3,
-            )
-            start, end = expt_indices_dict[ann_expt_name]
-            embedding_expt = embedding[start:end]
-            self._save_numpy_array(
-                embedding_expt,
-                ann_expt_path / "embeddings",
-                f"{ann_embedding_name}.npy",
-                depth=3,
-            )
+            if (
+                not (
+                    unann_expt_path / "embeddings" / f"{unann_embedding_name}.npy"
+                ).exists()
+                and not (
+                    unann_expt_path / "embeddings" / f"{ann_embedding_name}.npy"
+                ).exists()
+            ):
+                self._update_expt_record(
+                    self.use_annotations_to_mask[1],
+                    unann_expt_path,
+                    unann_embedding_name,
+                )
+
+                self._update_expt_record(
+                    self.use_annotations_to_mask[0], ann_expt_path, ann_embedding_name
+                )
+
+                embedding, expt_indices_dict = self.compute_behavior_embedding(
+                    [unann_expt_name], [ann_expt_name]
+                )
+                start, end = expt_indices_dict[unann_expt_name]
+                embedding_expt = embedding[start:end]
+                self._save_numpy_array(
+                    embedding_expt,
+                    unann_expt_path / "embeddings",
+                    f"{unann_embedding_name}.npy",
+                    depth=3,
+                )
+                start, end = expt_indices_dict[ann_expt_name]
+                embedding_expt = embedding[start:end]
+                self._save_numpy_array(
+                    embedding_expt,
+                    ann_expt_path / "embeddings",
+                    f"{ann_embedding_name}.npy",
+                    depth=3,
+                )
 
     @misc.timeit
     def compute_unsupervised_disparate_embeddings(self):

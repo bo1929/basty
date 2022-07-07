@@ -22,4 +22,4 @@ do
 done
 echo ${DATE}
 
-rsync -marziv "${PROJECT_DIRECTORY_PATH}/results" "${BACKUP_DIR_PATH}/results"
+rsync -marziv "${PROJECT_DIRECTORY_PATH}/results" "${BACKUP_DIR_PATH}"

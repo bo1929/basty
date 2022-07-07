@@ -2,14 +2,13 @@ import argparse
 from collections import defaultdict
 from pathlib import Path
 
+import basty.project.experiment_processing as experiment_processing
+import basty.utils.io as io
+import basty.utils.misc as misc
 import joblib as jl
 import numpy as np
 import pandas as pd
 from sklearn.metrics import classification_report, confusion_matrix
-
-import basty.project.experiment_processing as experiment_processing
-import basty.utils.io as io
-import basty.utils.misc as misc
 
 parser = argparse.ArgumentParser(
     description="Evaluate and report details about behavior predictions."

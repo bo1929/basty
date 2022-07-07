@@ -1,4 +1,5 @@
 MAX_LIMIT = 9999
+FONT = "Serif"
 
 
 class StyleEmbedding:
@@ -16,12 +17,17 @@ class StyleEmbedding:
         return {
             "config": {
                 "axis": {
+                    "labelFont": FONT,
+                    "titleFont": FONT,
                     "labelFontSize": 20,
                     "labelSeparation": 10,
                     "titleFontSize": 24,
                 },
+                "header": {"labelFont": FONT, "titleFont": FONT},
                 "mark": {"smooth": True},
                 "legend": {
+                    "labelFont": FONT,
+                    "titleFont": FONT,
                     "titleFontSize": 24,
                     "labelFontSize": 20,
                     "titleLimit": MAX_LIMIT,
@@ -35,7 +41,12 @@ class StyleEmbedding:
                     "labelOpacity": 1,
                     "symbolOpacity": 1,
                 },
-                "title": {"anchor": "start", "color": "gray", "fontSize": 25},
+                "title": {
+                    "font": FONT,
+                    "anchor": "start",
+                    "color": "gray",
+                    "fontSize": 25,
+                },
             }
         }
 
@@ -46,13 +57,18 @@ class StyleEthogram:
     def get_ethogram_style():
         return {
             "config": {
+                "header": {"labelFont": FONT, "titleFont": FONT},
                 "view": {"continuousWidth": 400, "continuousHeight": 300},
                 "axis": {
+                    "labelFont": FONT,
+                    "titleFont": FONT,
                     "labelFontSize": 20,
                     "labelSeparation": 10,
                     "titleFontSize": 24,
                 },
                 "legend": {
+                    "labelFont": FONT,
+                    "titleFont": FONT,
                     "labelFontSize": 20,
                     "labelLimit": MAX_LIMIT,
                     "labelOpacity": 1,
@@ -62,6 +78,11 @@ class StyleEthogram:
                     "titleFontSize": 24,
                     "titleLimit": MAX_LIMIT,
                 },
-                "title": {"anchor": "start", "color": "gray", "fontSize": 25},
+                "title": {
+                    "font": FONT,
+                    "anchor": "start",
+                    "color": "gray",
+                    "fontSize": 25,
+                },
             }
         }

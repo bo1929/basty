@@ -4,6 +4,7 @@ import scipy.ndimage.filters as filters
 from sklearn.mixture import GaussianMixture
 
 from sklearn.ensemble import RandomForestClassifier
+
 # from sklearn.neighbors import KNeighborsClassifier
 
 import basty.utils.misc as misc

@@ -1,10 +1,9 @@
 import argparse
 
-import joblib as jl
-import numpy as np
-
 import basty.project.experiment_processing as experiment_processing
 import basty.utils.io as io
+import joblib as jl
+import numpy as np
 
 parser = argparse.ArgumentParser(
     description="Evaluate and report details about active and dormant masks."
@@ -32,10 +31,7 @@ def get_recall_report(recall_dict, behavior_domain):
         if recall_dict[behavior] is None:
             report += f"\t\t- {behavior} is not observed.\n"
         else:
-            report += (
-                # f"\t\t- {round(recall_dict[behavior], 2)} of {behavior} is observed.\n"
-                f"\t\t- {recall_dict[behavior]} of {behavior} is observed.\n"
-            )
+            report += f"\t\t- {recall_dict[behavior]} of {behavior} is observed.\n"
     return report
 
 
@@ -67,9 +63,11 @@ def get_recall_scores(masked_annotation_counts, annotation_counts, expt_record):
     for behavior in list(expt_record.label_to_behavior.values()):
         all_count = all_count_dict.get(behavior, 0)
         masked_count = masked_count_dict.get(behavior, 0)
-        # recall_dict[behavior] = masked_count / all_count if all_count else None
+        recall_score = round(masked_count / (all_count + 1), 2)
         recall_dict[behavior] = (
-            f"{masked_count} / {all_count}" if all_count else f"{0} / {0}"
+            f"{recall_score} ({masked_count} / {all_count})"
+            if all_count
+            else f"{0} / {0}"
         )
     return recall_dict
 
@@ -155,6 +153,7 @@ def evaluate_predicted_masks(
         expt_path = project_obj.expt_path_dict[expt_name]
         expt_record = jl.load(expt_path / "expt_record.z")
         report = ""
+        evaluation_scores_dict = {}
         if expt_record.has_annotation:
             report += "============================================================\n"
             report += f"Evaluation for {expt_name};\n"
@@ -168,12 +167,14 @@ def evaluate_predicted_masks(
                 evaluation_dict = active_bout_evaluation(
                     annotations, annotation_counts, expt_record
                 )
+                evaluation_scores_dict["active-bouts"] = evaluation_dict
                 report += get_evaluation_report(evaluation_dict, behavior_domain)
             if evaluate_dormant_epochs:
                 report += "- Performance report for dormant epochs:\n"
                 evaluation_dict = dormant_epoch_evaluation(
                     annotations, annotation_counts, expt_record
                 )
+                evaluation_scores_dict["dormant-epochs"] = evaluation_dict
                 report += get_evaluation_report(evaluation_dict, behavior_domain)
 
             if evaluate_dormant_epochs and evaluate_active_bouts:
@@ -181,16 +182,26 @@ def evaluate_predicted_masks(
                 evaluation_dict = active_bout_and_dormant_epoch_evaluation(
                     annotations, annotation_counts, expt_record
                 )
+                evaluation_scores_dict[
+                    "active-bouts & dormant-epochs"
+                ] = evaluation_dict
                 report += get_evaluation_report(evaluation_dict, behavior_domain)
 
                 report += "- Performance report for active bouts in dormant epochs:\n"
                 evaluation_dict = active_bout_in_dormant_epoch_evaluation(
                     annotations, annotation_counts, expt_record
                 )
+                evaluation_scores_dict[
+                    "active-bouts in dormant-epochs"
+                ] = evaluation_dict
                 report += get_evaluation_report(evaluation_dict, behavior_domain)
             report += "============================================================\n"
-            io.safe_create_dir(evaluations_dir)
-            io.write_txt(report, evaluations_dir / f"{expt_name}.txt")
+            io.safe_create_dir(evaluations_dir / "reports")
+            io.write_txt(report, evaluations_dir / "reports" / f"{expt_name}.txt")
+            io.safe_create_dir(evaluations_dir / "scores")
+            jl.dump(
+                evaluation_scores_dict, evaluations_dir / "scores" / f"{expt_name}.z"
+            )
         else:
             print(f"{expt_name} does not have annotations, skipping...")
 
