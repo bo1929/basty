@@ -97,17 +97,16 @@ if __name__ == "__main__":
     active_bouts_supervised_kwargs = {"label_conversion_dict": label_conversion_dict}
     active_bouts_kwargs = {
         "datums_list": [[]],
-        "datums_winsize": 0,
+        "datums_winsize": max(FPS // 10, 1),
         "scale": False,
         "log_scale": True,
         "coefs_summary_method": "sum",
-        "post_processing_winsize": int(FPS * 2),
+        "post_processing_winsize": FPS,
         "post_processing_wintype": "boxcar",
         "use_supervised_learning": supervised_active_bouts,
         **active_bouts_supervised_kwargs,
         **active_bouts_unsupervised_kwargs,
     }
-
     log_params(
         args.main_cfg_path,
         "active_bouts",

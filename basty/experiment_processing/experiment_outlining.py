@@ -35,8 +35,8 @@ class OutlineMixin(PostProcessing):
 
 class OutlineClassifier(OutlineMixin):
     def __init__(self, **kwargs):
-        self.clf = RandomForestClassifier(**kwargs)
         # self.clf = KNeighborsClassifier(**kwargs)
+        self.clf = RandomForestClassifier(**kwargs)
         self.is_fitted = False
         self.n_samples_per_class = {None: 0}
 
@@ -50,11 +50,12 @@ class OutlineClassifier(OutlineMixin):
         self.is_fitted = True
 
     def predict(self, X):
-        return self.clf.predict(X)
         # y_prob = self.clf.predict_proba(X)
         # for class_label, n_samples in self.n_samples_per_class.items():
         #     y_prob[:, class_label] /= (np.log2(n_samples+1)+1)
-        # return np.argmax(y_prob, axis=1)
+        # y = np.argmax(y_prob, axis=1)
+        y = self.clf.predict(X)
+        return y
 
     def construct_outline_classifier(self, X_train_list, y_train_list, **kwargs):
         assert isinstance(X_train_list, list) and isinstance(y_train_list, list)

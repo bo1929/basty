@@ -167,14 +167,16 @@ def evaluate_predicted_masks(
                 evaluation_dict = active_bout_evaluation(
                     annotations, annotation_counts, expt_record
                 )
-                evaluation_scores_dict["active-bouts"] = evaluation_dict
+                key = "active-bouts"
+                evaluation_scores_dict[key] = evaluation_dict
                 report += get_evaluation_report(evaluation_dict, behavior_domain)
             if evaluate_dormant_epochs:
                 report += "- Performance report for dormant epochs:\n"
                 evaluation_dict = dormant_epoch_evaluation(
                     annotations, annotation_counts, expt_record
                 )
-                evaluation_scores_dict["dormant-epochs"] = evaluation_dict
+                key = "dormant-epochs"
+                evaluation_scores_dict[key] = evaluation_dict
                 report += get_evaluation_report(evaluation_dict, behavior_domain)
 
             if evaluate_dormant_epochs and evaluate_active_bouts:
@@ -182,18 +184,16 @@ def evaluate_predicted_masks(
                 evaluation_dict = active_bout_and_dormant_epoch_evaluation(
                     annotations, annotation_counts, expt_record
                 )
-                evaluation_scores_dict[
-                    "active-bouts & dormant-epochs"
-                ] = evaluation_dict
+                key = "active-bouts & dormant-epochs"
+                evaluation_scores_dict[key] = evaluation_dict
                 report += get_evaluation_report(evaluation_dict, behavior_domain)
 
                 report += "- Performance report for active bouts in dormant epochs:\n"
                 evaluation_dict = active_bout_in_dormant_epoch_evaluation(
                     annotations, annotation_counts, expt_record
                 )
-                evaluation_scores_dict[
-                    "active-bouts in dormant-epochs"
-                ] = evaluation_dict
+                key = "active-bouts in dormant-epochs"
+                evaluation_scores_dict[key] = evaluation_dict
                 report += get_evaluation_report(evaluation_dict, behavior_domain)
             report += "============================================================\n"
             io.safe_create_dir(evaluations_dir / "reports")

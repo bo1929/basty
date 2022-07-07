@@ -79,7 +79,7 @@ class ParameterHandler:
         decision_tree_kwargs["n_estimators"] = kwargs.pop("n_estimators", 10)
         decision_tree_kwargs["max_depth"] = kwargs.pop("max_depth", 5)
         decision_tree_kwargs["min_samples_leaf"] = kwargs.pop(
-            "min_samples_leaf", 10 ** 2
+            "min_samples_leaf", 10 ** 3
         )
         decision_tree_kwargs["max_features"] = kwargs.pop("max_features", "sqrt")
         decision_tree_kwargs["criterion"] = kwargs.pop("criterion", "gini")
