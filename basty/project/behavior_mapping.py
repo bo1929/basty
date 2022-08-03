@@ -163,6 +163,9 @@ class BehaviorEmbedding(BehaviorMixin):
             ann_expt_path = self.expt_path_dict[ann_expt_name]
             ann_embedding_name = f"{embedding_type}_{ann_expt_name}_{unann_expt_name}"
 
+            # fae_unann = (unann_expt_path / "embeddings" / f"{unann_embedding_name}.npy").exists()
+            # fae_ann = (ann_expt_path / "embeddings" / f"{ann_embedding_name}.npy").exists()
+
             self._update_expt_record(
                 self.use_annotations_to_mask[1], unann_expt_path, unann_embedding_name
             )

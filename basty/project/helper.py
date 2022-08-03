@@ -76,15 +76,16 @@ class ParameterHandler:
     @staticmethod
     def decision_tree_default_kwargs(**kwargs):
         decision_tree_kwargs = {}
-        decision_tree_kwargs["n_estimators"] = kwargs.pop("n_estimators", 10)
+        decision_tree_kwargs["n_estimators"] = kwargs.pop("n_estimators", 5)
         decision_tree_kwargs["max_depth"] = kwargs.pop("max_depth", 5)
         decision_tree_kwargs["min_samples_leaf"] = kwargs.pop(
-            "min_samples_leaf", 10 ** 3
+            "min_samples_leaf", 10 ** 2
         )
         decision_tree_kwargs["max_features"] = kwargs.pop("max_features", "sqrt")
         decision_tree_kwargs["criterion"] = kwargs.pop("criterion", "gini")
-        decision_tree_kwargs["class_weight"] = kwargs.pop("class_weight", "balanced")
-        decision_tree_kwargs["n_jobs"] = kwargs.pop("n_jobs", -1)
+        decision_tree_kwargs["class_weight"] = kwargs.pop(
+            "class_weight", "balanced_subsample"
+        )
         return decision_tree_kwargs
 
     @staticmethod

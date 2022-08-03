@@ -35,7 +35,7 @@ def plot_ethogram(expt_name, expt_record, y, y_col_name, date="2021-01-01"):
     all_bouts = []
     for i in range(cont_bouts.shape[0] - 1):
         start = f"{date} {expt_record.get_hour_stamp(cont_bouts[i])}"
-        finish = f"{date} {expt_record.get_hour_stamp(cont_bouts[i+1]+FPS*60)}"
+        finish = f"{date} {expt_record.get_hour_stamp(cont_bouts[i+1]+(FPS*60))}"
         behavior = label_to_behavior[y[cont_bouts[i]]]
         all_bouts.append({y_col_name: behavior, "Start": start, "Finish": finish})
     for behavior in domain_behaviors:

@@ -55,7 +55,7 @@ parser.add_argument(
     choices=["hard", "soft"],
 )
 parser.add_argument(
-    "--save_weights",
+    "--save-weights",
     default=False,
     action=argparse.BooleanOptionalAction,
 )
@@ -88,6 +88,7 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
     total_weight_dict = defaultdict(dict)
     all_behavior_to_label = {}
     arouse_annotation = None
+    inactive_annotation = None
 
     results_dir = project_obj.project_path / "results" / "semisupervised_pair_kNN"
 
@@ -95,12 +96,16 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
     neighbor_weights = kwargs.get("neighbor_weights", None)
     neighbor_weights_norm = kwargs.get("neighbor_weights_norm", None)
     activation = kwargs.get("activation", None)
+    voting = kwargs.get("voting", "soft")
+    voting_weights = kwargs.get("voting_weights", None)
 
     name_predictions = "predictions"
     name_predictions += f".{num_neighbors}NN"
     name_predictions += f".neighbor_weights-{neighbor_weights}"
     name_predictions += f".neighbor_weights_norm-{neighbor_weights_norm}"
     name_predictions += f".activation-{activation}"
+    name_predictions += f".voting-{voting}"
+    name_predictions += f".voting_weights-{voting_weights}"
 
     for expt_name_ann, expt_name_unann in pairs:
         print(f"{expt_name_ann} predicts {expt_name_unann}.")
@@ -121,7 +126,8 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
         X_ann = np.load(ann_embedding_dir / f"{ann_embedding_name}.npy")
 
         mask_active_unann = get_mask(unann_embedding_name, expt_record_unann)
-        mask_arouse_unann = np.logical_not(expt_record_unann.mask_dormant)
+        mask_dormant_unann = expt_record_unann.mask_dormant
+        mask_arouse_unann = np.logical_not(mask_dormant_unann)
         mask_active_ann = get_mask(ann_embedding_name, expt_record_ann)
 
         all_behavior_to_label = {
@@ -134,8 +140,13 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
 
         if arouse_annotation is not None:
             assert expt_record_ann.arouse_annotation == arouse_annotation
+        if inactive_annotation is not None:
+            assert expt_record_ann.inactive_annotation == inactive_annotation
+
         arouse_annotation = expt_record_ann.arouse_annotation
         arouse_label = all_behavior_to_label[arouse_annotation]
+        inactive_annotation = expt_record_ann.inactive_annotation
+        inactive_label = all_behavior_to_label[inactive_annotation]
 
         if expt_record_ann.has_annotation:
             annotations_ann = np.load(expt_path_ann / "annotations.npy")
@@ -189,44 +200,16 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
             w_pred_unann = w_pred_unann
 
         annotations_w_pred_unann = np.zeros((unann_num_of_frames, num_of_labels))
-        annotations_w_pred_unann[mask_active_unann, :] = w_pred_unann
         annotations_w_pred_unann[mask_arouse_unann, arouse_label] = 1
+        annotations_w_pred_unann[mask_dormant_unann, inactive_label] = 1
+        annotations_w_pred_unann[mask_active_unann, :] = w_pred_unann
 
         total_weight_dict[expt_name_unann][expt_name_ann] = annotations_w_pred_unann
 
-    if save_weights:
-        weights_dir = results_dir / name_predictions / "weights"
-        io.safe_create_dir(weights_dir)
-        for expt_name_unann in total_weight_dict.keys():
-            np.savez(
-                weights_dir / f"{expt_name_unann}.npz",
-                **total_weight_dict[expt_name_unann],
-            )
+    name_weights = "weights"
 
-    voting = kwargs.get("voting", "soft")
-    voting_weights = kwargs.get("voting_weights", None)
-    majority_window_size = kwargs.get("majority_window_size", 0)
-    min_short_duration = kwargs.get("min_short_duration", 0)
-    max_long_duration = kwargs.get("max_long_duration", 0)
-
-    postprocess_short_behaviors = kwargs.get("postprocess_short_behaviors", [])
-    postprocess_short_labels = [
-        all_behavior_to_label[behaivor] for behaivor in postprocess_short_behaviors
-    ]
-    postprocess_long_behaviors = kwargs.get("postprocess_long_behaviors", [])
-    postprocess_long_labels = [
-        all_behavior_to_label[behaivor] for behaivor in postprocess_long_behaviors
-    ]
-
-    name_annotations = "annotations"
-    name_annotations += f".voting-{voting}"
-    name_annotations += f".voting_weights-{voting_weights}"
-    name_annotations += f".majority_ws-{majority_window_size}"
-    name_annotations += f".min_short-{min_short_duration}"
-    name_annotations += f".max_long-{max_long_duration}"
-
-    annotations_dir = results_dir / name_predictions / name_annotations
-    io.safe_create_dir(annotations_dir)
+    weights_dir = results_dir / name_predictions / name_weights
+    io.safe_create_dir(weights_dir)
 
     for expt_name_unann in total_weight_dict.keys():
         expt_path_unann = project_obj.expt_path_dict[expt_name_unann]
@@ -269,26 +252,17 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
         else:
             total_weights = total_weights
 
-        annotations_wt_pred_unann = np.sum(total_weights, axis=0)
-        annotations_pred_unann = np.argmax(annotations_wt_pred_unann, axis=1)
+        annotations_wt_pred_unann = normalize(np.sum(total_weights, axis=0), norm="l1")
 
-        annotations_pred_unann = PostProcessing.compute_window_majority(
-            annotations_pred_unann,
-            majority_window_size,
-        )
-        annotations_pred_unann = PostProcessing.postprocess_wrt_durations(
-            annotations_pred_unann,
-            postprocess_short_labels,
-            min_short_duration,
-        )
-        annotations_pred_unann = PostProcessing.postprocess_wrt_durations(
-            annotations_pred_unann,
-            postprocess_long_labels,
-            max_long_duration,
-        )
-        annotations_pred_unann[annotations_pred_unann == -1] = 0
-
-        np.save(annotations_dir / f"{expt_name_unann}.npy", annotations_pred_unann)
+        if save_weights:
+            np.save(
+                weights_dir / f"{expt_name_unann}.npy",
+                annotations_wt_pred_unann,
+            )
+            np.savez(
+                weights_dir / f"{expt_name_unann}.npz",
+                **total_weight_dict[expt_name_unann],
+            )
 
 
 if __name__ == "__main__":
@@ -304,21 +278,8 @@ if __name__ == "__main__":
         "voting": args.voting,
         "voting_weights": args.voting_weights,
     }
-    postprocessing_kwargs = {
-        "majority_window_size": int(project.fps * 3),
-        "min_short_duration": int(project.fps * 1.5),
-        "postprocess_short_behaviors": [
-            "ProboscisPump",
-            "Moving",
-            "Grooming",
-            "HaltereSwitch",
-        ],
-        "max_long_duration": int(project.fps * 0),
-        "postprocess_long_behaviors": [],
-    }
     predict_behavioral_bouts(
         project,
         save_weights=args.save_weights,
         **prediction_kwargs,
-        **postprocessing_kwargs,
     )

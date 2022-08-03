@@ -3,7 +3,7 @@ FONT = "Serif"
 
 
 class StyleEmbedding:
-    colorscheme = "tableau20"
+    colorscheme = "tableau10"
     filled = True
     sizeDefault = 7
     sizeMin = 5
@@ -52,7 +52,7 @@ class StyleEmbedding:
 
 
 class StyleEthogram:
-    colorscheme = "tableau20"
+    colorscheme = "tableau10"
 
     def get_ethogram_style():
         return {

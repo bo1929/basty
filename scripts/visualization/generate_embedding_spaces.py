@@ -1,5 +1,4 @@
 import argparse
-
 import altair as alt
 import joblib as jl
 import numpy as np
@@ -173,7 +172,7 @@ def plot_embedding(
                 "Cardinality:Q",
                 scale=alt.Scale(
                     # type="log",
-                    reverse=True,
+                    # reverse=True,
                     rangeMax=StyleEmbedding.sizeMax,
                     rangeMin=StyleEmbedding.sizeMin,
                 ),
@@ -186,7 +185,7 @@ def plot_embedding(
                 "Cardinality:Q",
                 scale=alt.Scale(
                     # type="log",
-                    reverse=True,
+                    # reverse=True,
                     rangeMax=StyleEmbedding.opacityMax,
                     rangeMin=StyleEmbedding.opacityMin,
                 ),
@@ -208,7 +207,9 @@ def generate_semisupervised_pair(project_obj):
     annotated_expt_names = list(project_obj.annotation_path_dict.keys())
     all_expt_names = list(project_obj.expt_path_dict.keys())
     unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
-    pairs = misc.list_cartesian_product(annotated_expt_names, unannotated_expt_names)
+    if project_obj.evaluation_mode:
+        unannotated_expt_names = annotated_expt_names
+    pairs = [(name1, name2) for name1, name2 in pairs if name1 != name2]
     for expt_name_ann, expt_name_unann in pairs:
         expt_path_unann = project_obj.expt_path_dict[expt_name_unann]
         expt_path_ann = project_obj.expt_path_dict[expt_name_ann]
@@ -216,14 +217,16 @@ def generate_semisupervised_pair(project_obj):
         expt_record_unann = jl.load(expt_path_unann / "expt_record.z")
         expt_record_ann = jl.load(expt_path_ann / "expt_record.z")
 
-        ann_embedding_name = f"semisupervised_pair_embedding_{expt_name_unann}"
+        pair_name = f"{expt_name_ann}_{expt_name_unann}"
+
+        ann_embedding_name = f"semisupervised_pair_embedding_{pair_name}"
         ann_embedding_dir = expt_path_ann / "embeddings"
         X_ann = np.load(ann_embedding_dir / f"{ann_embedding_name}.npy")
         X_ann, y_ann, y_col_name, expt_record_ann = mask_and_get_labels(
             X_ann, expt_path_ann, ann_embedding_name, expt_record_ann
         )
 
-        unann_embedding_name = f"semisupervised_pair_embedding_{expt_name_ann}"
+        unann_embedding_name = f"semisupervised_pair_embedding_{pair_name}"
         unann_embedding_dir = expt_path_unann / "embeddings"
         X_unann = np.load(unann_embedding_dir / f"{unann_embedding_name}.npy")
         X_unann, y_unann, y_col_name, expt_record_unann = mask_and_get_labels(
