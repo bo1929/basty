@@ -1,9 +1,10 @@
 import argparse
 
-import basty.project.experiment_processing as experiment_processing
-import basty.utils.io as io
 import joblib as jl
 import numpy as np
+
+import basty.project.experiment_processing as experiment_processing
+import basty.utils.io as io
 
 parser = argparse.ArgumentParser(
     description="Evaluate and report details about active and dormant masks."

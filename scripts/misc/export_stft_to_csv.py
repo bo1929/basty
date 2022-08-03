@@ -1,7 +1,8 @@
 import argparse
 
-import basty.project.experiment_processing as experiment_processing
 import pandas as pd
+
+import basty.project.experiment_processing as experiment_processing
 
 parser = argparse.ArgumentParser(
     description="Export spatio-temporal features as csv files."

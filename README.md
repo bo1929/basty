@@ -4,19 +4,20 @@
 
 ## ⚡️ Quickstart
 
-Install [poetry](https://python-poetry.org/docs/) and [conda](https://www.anaconda.com/products/distribution) and create a new environement :
+Create a new virtual environment with [conda](https://www.anaconda.com/products/distribution).
 ``` bash
 conda create -n basty python=3.9.0
 ```
-```
+Then activate created environment.
+``` bash
 conda activate basty
 ```
-Using poetry install dependencies after ```cd``` into the cloned folder :
 
-```
+Install [poetry](https://python-poetry.org/docs/) and using poetry install dependencies after changing the current directory into the cloned folder.
+```bash
 poetry install
 ```
-Initialize a project by : 
-```
+Then, initialize a project using the below command.
+```bash
 python init_project.py --main-cfg-path ~/basty/examples/configurations/main_cfg.yaml
 ```
