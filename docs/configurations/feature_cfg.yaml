@@ -1,26 +1,26 @@
-# Define feature by giving body part names.
-# A feature is defined by a list of body parts. 
+# Define features by giving body part names.
+# A feature is defined by a list of body parts.
 
-# Optionally avg., min. or max. of a feature group can be included as follows.
-# Only for angle, distance, delta distance and delta angles.
-# - avg: [feature 1, feature 2, ..., feature n] 
-# - min: [feature 1, feature 2, ..., feature n] 
-# - max: [feature 1, feature 2, ..., feature n] 
+# Optionally avg., min., or max. of a feature group can be included as follows.
+# Only for angle, distance, delta distance, and delta angles.
+# - avg: [feature 1, feature 2, ..., feature n]
+# - min: [feature 1, feature 2, ..., feature n]
+# - max: [feature 1, feature 2, ..., feature n]
 
 ### ~~~ ###
 
 ### Snap features ###
 
-# Use cartesian components (x,y values) of given body-parts, one body-part.
+# Use cartesian components (x,y values) of given body parts, one body part.
 pose:
     - prob
     - halt
     - thor_post
 
-# Use given body-parts to compute angle values, three body-parts.
+# Use given body parts to compute angle values, three body parts.
 angle: [ ]
 
-# Use given body-parts to compute distance values, two body-parts.
+# Use given body parts to compute distance values, two body parts.
 distance:
     - [origin, halt]
     - [origin, prob]
@@ -40,22 +40,22 @@ distance:
 
 ### Delta features ###
 
-# Given delta scales, delta feature set will be smoothed on each scale.
-# Scales values should be milisecond values.
-# Number of frames will be calculated based on the FPS value given in main cfg file.
+# Given delta scales, the delta feature set will be smoothed on each scale.
+# Scales values should be millisecond values.
+# Number of frames will be calculated based on the FPS value given in the temporal configuration file.
 delta_scales: [33]
 
-# Use given body-parts to compute velocity values, one body-part.
+# Use given body parts to compute velocity values, one body part.
 pose_delta:
     - head
     - prob
     - halt
     - thor_post
 
-# Use given body-parts to compute angular velocity values, three body-parts.
+# Use given body parts to compute angular velocity values, three body parts.
 angle_delta: []
 
-# Use given body-parts to compute change in distance values, two body-parts.
+# Use given body parts to compute the change in distance values, two body parts.
 distance_delta:
     - [head, prob]
     - [thor_post, prob]
@@ -70,10 +70,10 @@ distance_delta:
 ### Window features ###
 
 # Given window sizes, moving std. or/and moving mean can be calculated for each feature.
-# You need to call corresponding function explicitly for delta features and/or snap features.
-# This is optinal, and not recommended.
-# Especially for delta features, computing window features results in many redundant features.
-# For n window and m scales, $m \times n$ feature will be generated.
+# You need to call the corresponding function explicitly for delta features and/or snap features.
+# This is optional, and not recommended.
+# Especially for delta features, computing window features result in many redundant features.
+# For $n$ number of windows and $m$ number of scales, $m \times n$ many feature will be generated.
 window_sizes:  [300, 500]
 
 ### ~~~ ###

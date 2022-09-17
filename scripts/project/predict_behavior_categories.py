@@ -163,7 +163,7 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
         if neighbor_weights == "distance":
             weights = 1 / distances
         elif neighbor_weights == "sq_distance":
-            weights = 1 / distances ** 2
+            weights = 1 / distances**2
         else:
             weights = np.ones(distances.shape)
 

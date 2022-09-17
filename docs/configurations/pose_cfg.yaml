@@ -1,4 +1,4 @@
-### Body-parts Declaration ###
+### Body-parts Declarations ###
 # --->
 # Required.
 singles:
@@ -10,8 +10,8 @@ singles:
   - thor_ant
   - thor_post
 
-# Drop one of the left-right counterparts based on llh values.
-# If you want to keep both, list under single.
+# Drop one of the left-right counterparts based on the confidence scores.
+# If you want to keep both, list them under the single key.
 # Optional.
 counterparts:  # new: [left, right]
   head: [head_l, head_r]
@@ -29,7 +29,7 @@ counterparts:  # new: [left, right]
   joint2_mid: [joint2_lmid, joint2_rmid]
   joint3_mid: [joint_3lmid, joint_3rmid]
 
-# Group definitions for analog body-parts.
+# Group definitions for analogous body parts.
 # Optional.
 groups: 
   joint:
@@ -72,7 +72,7 @@ defined_points: # p = (x1 + x2 + ... xn)/n + (y1 + y2 + ... yn)/n
   - thor_ant
   - thor_post
 
-# Construct spine through two body-parts.
-# Give only two body-part, a line representing spine will pass through them.
+# Construct the spine through two body parts.
+# Give only two body parts, a line representing the spine will pass through them.
 # Optional for egocentric frames.
 centerline: [thor_ant, thor_post]

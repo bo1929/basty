@@ -9,7 +9,7 @@ import basty.project.experiment_processing as experiment_processing
 import basty.utils.io as io
 import basty.utils.misc as misc
 
-parser = argparse.ArgumentParser(description="Export and export predictions as a csv.")
+parser = argparse.ArgumentParser(description="Export predictions as a csv.")
 parser.add_argument(
     "--main-cfg-path",
     type=str,

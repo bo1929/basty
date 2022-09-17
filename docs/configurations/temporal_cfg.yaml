@@ -1,4 +1,4 @@
-# For time-stamps and figures.
+# For time-stamps, figures, and time scale computation.
 fps: 30
 
 wt:
@@ -7,31 +7,32 @@ wt:
     num_channels: 20
     freq_up: 10
     freq_low: 0.1
-    freq_spacing: dyadic
+    freq_spacing: dyadically
     normalization_option: 2
 
-# Optinal, if given wt is ignored for that snap feature.
+# Optinal, if above 'wt' config should be ignored for that a specific snap feature.
+# 'wt' config can be overwritten for specific features by defining a separate one under 'wt_detached'.
 # wt_detached:
-#   2: # This is the snap name key, can be found in snap_names_dict.ymal
+#   2: # This is the snap name key, which can be found in snap_names_dict.yaml
 #     wavelet: morl
 #     padding: reflect
 #     num_channels: 20
 #     freq_up: 10
 #     freq_low: 0.1
-#     freq_spacing: dyadic
+#     freq_spacing: dyadically
 
 windows:
   winsize: 600
-  # If chunk is True, then stepsize is ignored.
   stepsize: 60
   # method: 'count' or 'tf-idf'
   method: tf-idf
   # For scipy.signal.get_window (must require no parameters).
-  # If method is tf-idf then this must be boxcar.
-  # Default is boxcar.
+  # If the method is tf-idf then this must be boxcar.
+  # Default is the boxcar.
   wintype: boxcar
   # norm: (Optional) 'l1' or 'l2' or 'max' if method is count.
-  # If method is count or binary then default is None.
-  # norm: (Optional) 'l1' or 'l2' if method is tfidf.
-  # If method is tf-idf then default is 'l1' 
+  # If the method is count or binary then the default is None.
+  # norm: (Optional) 'l1' or 'l2' if method is tf-idf.
+  # If the method is tf-idf then the default is 'l1' 
   norm: null
+
