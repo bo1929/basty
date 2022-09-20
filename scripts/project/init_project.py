@@ -5,7 +5,7 @@ from utils import backup_old_project, log_params
 from basty.project.experiment_processing import Project
 
 parser = argparse.ArgumentParser(
-    description="Initialize project  based on a given main configuration."
+    description="Initialize project based on a given main configuration."
 )
 parser.add_argument(
     "--main-cfg-path",

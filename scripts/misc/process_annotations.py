@@ -3,7 +3,7 @@ import pathlib
 
 import pandas as pd
 
-LABEL_INACTIVE = "Idle&Other"
+LABEL_UNANNOTATED = "Idle&Other"
 
 parser = argparse.ArgumentParser(prog="PROG")
 parser.add_argument(
@@ -50,7 +50,7 @@ for path in pathlib.Path(annotation_directory / f"{expt_name}/").glob("*.csv"):
 df_ann = pd.concat(annotations.values()).sort_values("Beginning").reset_index(drop=True)
 ann_stop_dict = {"Beginning": [], "End": [], "Behavior": []}
 for i in range(df_ann.shape[0]):
-    ann_stop_dict["Behavior"].append(LABEL_INACTIVE)
+    ann_stop_dict["Behavior"].append(LABEL_UNANNOTATED)
     ann_stop_dict["Beginning"].append(df_ann["End"].iloc[i])
     if i == df_ann.shape[0] - 1:
         ann_stop_dict["End"].append(num_of_frames)
@@ -58,7 +58,7 @@ for i in range(df_ann.shape[0]):
         ann_stop_dict["End"].append(df_ann["Beginning"].iloc[i + 1])
 
 if df_ann["Beginning"].iloc[0] != 0:
-    ann_stop_dict["Behavior"].append(LABEL_INACTIVE)
+    ann_stop_dict["Behavior"].append(LABEL_UNANNOTATED)
     ann_stop_dict["Beginning"].append(0)
     ann_stop_dict["End"].append(df_ann["Beginning"].iloc[0])
 

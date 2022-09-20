@@ -19,12 +19,12 @@ class WaveletTransformation:
         self.num_channels = self.wv_cfg.get("num_channels", 20)
         self.freq_low = self.wv_cfg.get("freq_low", 0.5)
         self.freq_up = self.wv_cfg.get("freq_up", self.sampling_freq / 2)
-        self.freq_spacing = self.wv_cfg.get("freq_spacing", "dyadic")
+        self.freq_spacing = self.wv_cfg.get("freq_spacing", "dyadically")
         self.normalization_option = self.wv_cfg.get("normalization_option", 2)
 
         assert self.num_channels > 1
         assert self.freq_low > 0
-        assert self.freq_spacing in ["dyadic", "linear"]
+        assert self.freq_spacing in ["dyadically", "linearly"]
 
         if self.freq_up > (self.sampling_freq / 2):
             self.logger.warning(
@@ -43,7 +43,7 @@ class WaveletTransformation:
 
     def _get_scales(self):
         if self.wavelet == "morl":
-            if self.freq_spacing == "dyadic":
+            if self.freq_spacing == "dyadically":
                 exp_f = math.log2(self.freq_up / self.freq_low)
                 freq_range = self.freq_up * np.exp2(
                     np.arange(0, self.num_channels) * exp_f / (-self.num_channels + 1)
@@ -52,7 +52,7 @@ class WaveletTransformation:
                 # This is also possible, precision is worse though.
                 # scales = (self.w0 + math.sqrt(2+self.w0**2)) / (4*math.pi*freq_range*self.dt)
                 # freq_range = pywt.scale2frequency(self.wavelet, scales) / self.dt
-            if self.freq_spacing == "linear":
+            if self.freq_spacing == "linearly":
                 freq_range = np.linspace(self.freq_low, self.freq_up, self.num_channels)
                 scales = self.dc * 1 / (freq_range * self.dt)
         else:
@@ -101,7 +101,7 @@ class WaveletTransformation:
             pass
         elif self.wavelet == "morl" and opt == 1:
             exp1 = (math.pi ** (-0.25)) / np.sqrt(2 * self.scales)
-            exp2 = math.exp((1 / 4) * (self.w0 - math.sqrt(self.w0 ** 2 + 2)) ** 2)
+            exp2 = math.exp((1 / 4) * (self.w0 - math.sqrt(self.w0**2 + 2)) ** 2)
             C = exp1 * exp2
             cwt_coefs_n[:, :, :] = np.abs(
                 np.divide(cwt_coefs_n[:, :, :], C[np.newaxis, :, np.newaxis])

@@ -45,7 +45,7 @@ Then, *basty* performs **high-performance behavior mapping** and allows a fine-g
   ```
 7. Generate behavioral embedding space(s).
   At this step, you have different options (e.g., unsupervised or semi-supervised dimensionality reduction).
-  For a detailed description and some tips, please see [Pipeline Description](docs/PipelineDescription.md) and [Usage Example](docs/UsageExample.md).
+  For a detailed description and some tips, please see [Practical Guide](docs/Practical_Guide.md).
   Assuming labeled data is available for semi-supervised behavior mapping, the following command generates semi-supervised pair embeddings (see [Nomenclature](docs/Nomenclature.md) for the definitions).
   ```bash
   python map_behaviors.py --main-cfg-path /path/to/main_cfg.yaml --compute-semisupervised-pair-embeddings
@@ -59,10 +59,9 @@ Then, *basty* performs **high-performance behavior mapping** and allows a fine-g
   ```
 
 ## Guide & Documentation
-* [Description of the Pipeline](docs/Description_of_the_Pipeline.md)
+* [Practical Guide](docs/Practical_Guide.md)
 * [Folder Structure](docs/Folder_Structure.md)
 * [Configuration Files](docs/Configuration_Files.md)
-* [Usage Example](docs/Usage_Example.md)
 * [Nomenclature](docs/Nomenclature.md)
 
 ## References

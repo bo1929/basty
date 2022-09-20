@@ -309,11 +309,11 @@ def cramers_serial_dependency(y_binary, min_lag, max_lag):
 
 def cohens_serial_dependency(y_binary, min_lag, max_lag):
     hat_pi = np.mean(y_binary, axis=0)
-    denom = 1 - np.sum(hat_pi ** 2)
+    denom = 1 - np.sum(hat_pi**2)
     cohens = np.zeros(max_lag + 1)
     lagged_bivar_prob = compute_lagged_bivariate_prob(y_binary, min_lag, max_lag)
     for lag in range(min_lag, max_lag + 1):
         cohens[lag] = (
-            np.sum(np.diag(lagged_bivar_prob[lag - min_lag]) - hat_pi ** 2) / denom
+            np.sum(np.diag(lagged_bivar_prob[lag - min_lag]) - hat_pi**2) / denom
         )
     return cohens

@@ -77,7 +77,7 @@ After computing orientations and modifying the data based on the pose configurat
 #### 📄`spatiotemporal_features.py`
 This file contains the `SpatioTemporal` class, whose task is to compute basic spatio-temporal features from the reduced & processed pose values.
  `SpatioTemporal.get_snap_stft` and `SpatioTemporal.get_delta_stft` are two essential methods of this class.
-  As described in [Description of the Pipeline](Description_of_the_Pipeline.md), there exist two types of spatio-temporal features: ones that are computed based on the instantaneous values (snapshot features) and ones that are computed based on the changing values (delta features).
+  As described in [Practical Guide](Practical_Guide.md), there exist two types of spatio-temporal features: ones that are computed based on the instantaneous values (snapshot features) and ones that are computed based on the changing values (delta features).
   For instance, snapshot features include distances, angles, and relative positions; delta features include velocities, angular velocities, and changes in distances.
 
 #### 📄`wavelet_transformation.py`
