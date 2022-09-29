@@ -38,7 +38,7 @@ class FeatureExtraction(Project):
             if expt_pose_path.exists():
                 self.logger.file_already_exists("pose.pkl", expt_pose_path)
             else:
-                file_path_list = list(data_path.glob(name + "-" + "[0-9]" * 4 + ".csv"))
+                file_path_list = list(data_path.glob(name + ".csv"))
                 # At least one .csv file  with appropriate naming must be found
                 # in the given experiment data directory.
                 assert len(file_path_list) != 0
