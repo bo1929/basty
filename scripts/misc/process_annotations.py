@@ -35,7 +35,8 @@ for path in pathlib.Path(annotation_directory / f"{expt_name}/").glob("*.csv"):
     print(path)
     try:
         bhv = "-".join(path.stem.split("-")[-1].split("_"))
-        df_tmp = pd.read_csv(path, header=None)
+        bhv = bhv.replace("-and-", "&")
+        df_tmp = pd.read_csv(path, header=None, dtype=int)
         df_tmp = df_tmp.rename(columns={0: "Beginning", 1: "End"})
         df_tmp = df_tmp.assign(
             Behavior=pd.Series([bhv for _ in range(df_tmp.shape[0])]).values
@@ -71,4 +72,5 @@ df_ann = (
     .sort_values("Beginning")
     .reset_index(drop=True)
 )
+df_ann = df_ann.query("Beginning != End")
 df_ann.to_csv(annotation_directory / f"{expt_name}.csv")

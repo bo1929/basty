@@ -65,4 +65,4 @@ Then, *basty* performs **high-performance behavior mapping** and allows a fine-g
 * [Nomenclature](docs/Nomenclature.md)
 
 ## References
-* [1] : Mathis, Alexander, et al. "DeepLabCut: markerless pose estimation of user-defined body parts with deep learning." Nature neuroscience 21.9 (2018): 1281-1289.
+* [^1] : Mathis, Alexander, et al. "DeepLabCut: markerless pose estimation of user-defined body parts with deep learning." Nature neuroscience 21.9 (2018): 1281-1289.
