@@ -1,3 +1,4 @@
+import re
 from collections import defaultdict
 
 import numpy as np
@@ -44,7 +45,12 @@ class FeatureExtraction(Project):
                 assert len(file_path_list) != 0
 
                 for file_path in tqdm(sorted(file_path_list), leave=False, desc=name):
-                    expt_idx = file_path.stem.split("-")[-1]
+                    expt_partID = file_path.stem.split("-")[-1]
+                    expt_idx = (
+                        int(expt_partID)
+                        if re.compile("[0-9]" * 4).match(expt_partID)
+                        else 0
+                    )
                     expt_idx_key.append(int(expt_idx))
 
                     df_coord = pd.read_csv(file_path, low_memory=False)
