@@ -59,6 +59,7 @@ Then, *basty* performs **high-performance behavior mapping** and allows a fine-g
   ```
 
 ## Guide & Documentation
+* [Overview](docs/Overview.md)
 * [Practical Guide](docs/Practical_Guide.md)
 * [Folder Structure](docs/Folder_Structure.md)
 * [Configuration Files](docs/Configuration_Files.md)

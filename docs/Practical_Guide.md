@@ -118,17 +118,88 @@ label_conversion_dict = {
 ```
 
 ## Mapping Activities Behavioral Embedding Spaces
+The python script `map_behaviors.py` provides some critical and important functionality for behavior mapping, together with many redundant and impractical ones.
+We will use `map_behaviors.py` to compute behavioral embedding spaces with different approaches (e.g., joint and disparate behavioral embeddings, using supervised or unsupervised dimensionality reduction).
+The other not-so-useful functionalities this script provides are related to clustering and analysis of clusters.
+As **basty** evolved to be a supervised or semi-supervised pipeline, we did not evaluate the performances of clustering-related components.
+
+Our behavioral nearest neighbor prediction scheme requires the computation of behavioral embedding spaces called semi-supervised pair embeddings.
+In this approach, we run a semi-supervised extension of UMAP with each annotated and unannotated behavioral experiment pair.
+As a result for $R^{+}$ annotated and $R^{-}$ unannotated experiments, $R^{+} \times R^{-}$ many low dimensional behavioral space is generated.
 ```bash
 python map_behaviors.py --main-cfg-path /path/to/main_cfg.yaml --compute-semisupervised-pair-embeddings
 ```
+For more detailed and accurate explanations of the dimensionality reduction parameters please see [UMAP documentation](https://umap-learn.readthedocs.io/en/latest/api.html).
+The below defaults should work well in most cases.
+We recommend sticking to Hellinger distance as behavioral representations are $\textnormal{L}_1$ normalized vectors, treating them as probability distributions make more sense.
+```python
+UMAP_kwargs = {}
+UMAP_kwargs["embedding_n_neighbors"] = 75
+UMAP_kwargs["embedding_min_dist"] = 0.0
+UMAP_kwargs["embedding_spread"] = 1.0
+UMAP_kwargs["embedding_n_components"] = 2
+UMAP_kwargs["embedding_metric"] = "hellinger"
+UMAP_kwargs["embedding_low_memory"] = False
+use_annotations_to_mask = (True, False)
+embedding_kwargs = {
+    **UMAP_kwargs,
+    "use_annotations_to_mask": use_annotations_to_mask,
+}
+```
+The parameter `use_annotations_to_mask` is pair of boolean values, which controls the subset of frames to be used in the computation of behavioral embeddings.
+If the first value is `True`, then only the annotated frames of the supervised experiment will be used.
+Otherwise, all frames detected to be dormant and active in the previous stage of the pipeline will be used.
+The same is true for the unsupervised experiment with respect to the second value of the tuple, but only if `evaluation_mode` is `true` in the main configuration (as a matter of fact, an unsupervised experiment is supposed to lack annotations in the first place).
+
+The below parameters are for density-based clustering.
+See [HDBSCAN documentation](https://hdbscan.readthedocs.io/en/latest/parameter_selection.html), if you want to experiment with clustering in behavioral embedding spaces.
+```python
+HDBSCAN_kwargs = {}
+HDBSCAN_kwargs["prediction_data"] = True
+HDBSCAN_kwargs["approx_min_span_tree"] = True
+HDBSCAN_kwargs["cluster_selection_method"] = "eom"
+HDBSCAN_kwargs["cluster_selection_epsilon"] = 0.0
+HDBSCAN_kwargs["min_cluster_size"] = 500
+HDBSCAN_kwargs["min_cluster_samples"] = 5
+clustering_kwargs = {**HDBSCAN_kwargs}
+```
 
 ## Computing Behavioral Scores & Predicting Behavioral Categories
+Lastly, `predict_behavioral_categories.py` script computes behavioral scores and predicts corresponding behavioral categories by performing a nearest neighbor based analysis in the semi-supervised behavior embeddings.
+It can be configured by using different command line arguments.
+To see available arguments and their possible values, one can run the below command.
+```bash
+python predict_behavioral_categories.py --help
+```
+The output is the following.
+```
+usage: predict_behavioral_categories.py [-h] --main-cfg-path MAIN_CFG_PATH --num-neighbors NUM_NEIGHBORS [--neighbor-weights {distance,sq_distance}]
+                                        [--neighbor-weights-norm {count,log_count,sqrt_count,proportion}] [--activation {softmax,standard}]
+                                        [--voting-weights {entropy,uncertainity}] [--voting {hard,soft}] [--save-weights | --no-save-weights]
+```
+Here, as the name suggests, `num-neighbors` is basically the number of nearest neighbors contributing to the behavioral score.
+This value is typically in the wide interval of $5$ to $100$.
+However, as the value of `num-neighbors` increases, imbalanced classes (if exists) become a  more serious problem.
+As a matter of fact, behavioral categories usually have a very imbalanced number of occurrence distributions.
+To deal with this, one might want to use `--neighbor-weights-norm` option.
+For instance, `--neighbor-weights-norm log_count` will normalize each score with the $\log$ number of occurrences of the corresponding behavioral category.
+As a default, this script does not apply any such normalization.
+The argument `--neighbor-weights` can be used to weight points by the inverse of their distance, i.e., closer neighbors will have a greater influence than neighbors which are further away.
+Before combining behavioral weights contributed by each annotated experiment, one also may want to map those weights to interval $(0,1)$ to avoid complications related to differences in the scales.
+This can be achieved by `--activation softmax` or `--activation standard`.
+The other two arguments, namely `--voting-weights` and `--voting`, configure how the behavioral weights contributed by different annotated experiments are combined to compute a final behavioral score.
+If `--voting soft` is passed, then the behavioral weights are directly included in the summation. Else, if `--voting hard` is passed, then behavioral weights are binarized before the summation as maximum category being $1$ and others being $0$.
+It is also possible to adjust the contribution of each annotated experiment with respect to the level of uncertainty by using `--voting-weights`.
+In other words, if the behavioral weight mainly favors one category and is certain about it, then their contribution will have a greater influence on the final score.
+
+A sensible example list of arguments for `predict_behavior_categories.py` is given below.
 ```bash
 python predict_behavior_categories.py --main-cfg-path /path/to/main_cfg.yaml \
   --num-neighbors 15 --neighbor-weights distance --neighbor-weights-norm log_count \
   --activation standard --voting soft
 ```
 
+Finally, a report of predictions can simply be generated with the `export_behavior_predictions.py` script as below.
 ```bash
 python export_behavior_predictions.py --main-cfg-path /path/to/main_cfg.yaml
 ```
