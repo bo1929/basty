@@ -4,7 +4,7 @@
 The software consists of an **end-to-end & multi-stage pipeline** and a couple of useful scripts for behavioral analysis.
 *basty* is specifically designed for unique **challenges related to the characteristics of sleep**, so can deal with hard-to-detect behaviors exhibited rarely during long sleep cycles.
 It allows both unsupervised and semi-supervised analysis and is able to map the animal tracking data to given behavioral categories with **limited supervision** (*basty* does not require a large labeled data set!).
-*basty* also offers an extensive set of pre-processing procedures, and therefore, can directly operate on noisy pose estimation data (e.g., DeepLabCut[^1]).
+*basty* also offers an extensive set of pre-processing procedures, and therefore, can directly operate on noisy pose estimation data (e.g., DeepLabCut [1]).
 Similar to many other behavior mapping pipelines, *basty* starts by computing a meaningful high-dimensional spatio-temporal representation from the filtered and imputed pose estimation data.
 Utilizing high-dimensional time-series representations, our software can detect **sleep epochs**, **micro-activities** (e.g., postural adjustment and short-duration grooming behaviors), and **macro-activities** (e.g., feeding and walking).
 Then, *basty* performs **high-performance behavior mapping** and allows a fine-grained categorization of the micro-activities by generating behavior embeddings and using a novel nearest neighbor-based prediction scheme.
@@ -65,4 +65,4 @@ Then, *basty* performs **high-performance behavior mapping** and allows a fine-g
 * [Nomenclature](docs/Nomenclature.md)
 
 ## References
-* [^1] : Mathis, Alexander, et al. "DeepLabCut: markerless pose estimation of user-defined body parts with deep learning." Nature neuroscience 21.9 (2018): 1281-1289.
+* [1] Mathis, Alexander, et al. "DeepLabCut: markerless pose estimation of user-defined body parts with deep learning." Nature neuroscience 21.9 (2018): 1281-1289.
