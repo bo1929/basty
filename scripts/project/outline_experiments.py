@@ -50,10 +50,10 @@ if __name__ == "__main__":
             "HaltereSwitch",
             "Feeding",
             "Grooming",
-            "ProboscisPump",
+            "ProboscisPumping",
         ],
         1: [
-            "Moving",
+            "PosturalAdjustment&Moving",
         ],
         2: [
             "Noise",
@@ -90,8 +90,8 @@ if __name__ == "__main__":
         1: [
             "Feeding",
             "Grooming",
-            "ProboscisPump",
-            "Moving",
+            "ProboscisPumping",
+            "PosturalAdjustment&Moving",
         ],
     }
     active_bouts_supervised_kwargs = {"label_conversion_dict": label_conversion_dict}

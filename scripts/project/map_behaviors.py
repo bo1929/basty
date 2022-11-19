@@ -134,7 +134,7 @@ if __name__ == "__main__":
     UMAP_kwargs["embedding_n_components"] = 2
     UMAP_kwargs["embedding_metric"] = "hellinger"
     UMAP_kwargs["embedding_low_memory"] = False
-    use_annotations_to_mask = (True, True)
+    use_annotations_to_mask = (True, False)
     embedding_kwargs = {
         **UMAP_kwargs,
         "use_annotations_to_mask": use_annotations_to_mask,

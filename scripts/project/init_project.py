@@ -32,7 +32,7 @@ if __name__ == "__main__":
         annotation_priority=[],
         inactive_annotation="Idle&Other",
         noise_annotation="Noise",
-        arouse_annotation="Moving",
+        arouse_annotation="PosturalAdjustment&Moving",
     )
     log_params(args.main_cfg_path, "init_params", init_kwargs)
     proj = Project(args.main_cfg_path, **init_kwargs)
