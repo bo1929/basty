@@ -252,11 +252,11 @@ def predict_behavioral_bouts(project_obj, save_weights=False, **kwargs):
         else:
             total_weights = total_weights
 
-        annotations_wt_pred_unann = normalize(np.sum(total_weights, axis=0), norm="l1")
+        weights_wt_pred_unann = normalize(np.sum(total_weights, axis=0), norm="l1")
 
         np.save(
             weights_dir / f"{expt_name_unann}.npy",
-            annotations_wt_pred_unann,
+            weights_wt_pred_unann,
         )
         if save_weights:
             np.savez(
