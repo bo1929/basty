@@ -34,7 +34,7 @@ def export_behavior_predictions(project_obj, filter_behaviors):
 
     for weights_dir in tqdm(weights_directories):
         assert weights_dir.is_dir()
-        exports_dir = Path(str(weights_dir).replace("weights", "exports"))
+        exports_dir = Path(str(weights_dir)).parent / "exports"
 
         for weights_pred_path in weights_dir.glob("Fly*.npy"):
             expt_name = weights_pred_path.stem
