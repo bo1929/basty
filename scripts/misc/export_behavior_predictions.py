@@ -42,7 +42,7 @@ def export_behavior_predictions(project_obj, filter_behaviors):
             expt_record = jl.load(expt_path / "expt_record.z")
 
             weights_pred = np.load(weights_pred_path)
-            weights_pred = uniform_filter1d(weights_pred, size=90, axis=0)
+            weights_pred = uniform_filter1d(weights_pred, size=90, axis=0)  # 120?
             weights_pred = np.round(np.abs(normalize(weights_pred, norm="l1")), 5)
             # export_df = misc.generate_bout_report(
             #     weights_pred, label_to_behavior, filter_behaviors
@@ -53,6 +53,9 @@ def export_behavior_predictions(project_obj, filter_behaviors):
                     label_to_behavior.get(i, f"Behavior-{i}")
                     for i in range(weights_pred.shape[1])
                 ],
+            )
+            export_df = export_df.filter(
+                items=[col for col in export_df.columns if col not in filter_behaviors]
             )
 
             io.safe_create_dir(exports_dir)
