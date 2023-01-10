@@ -6,6 +6,7 @@ import textwrap
 import time
 from collections import Counter
 import yaml
+import re
 
 import numpy as np
 import pandas as pd
@@ -32,6 +33,18 @@ def sort_dict(x):
         # Sorts dictionary by key.
         return dict(sorted(x.items()))
     return x
+
+def parse_experiment_names(data_path_dict):
+    """Takes in the name of the experiments and returns a dataframe containing
+    sex,age and sleep deprivation info"""
+    df = pd.DataFrame(data_path_dict.items(), columns=['ExptNames', 'Path'])
+    df['SD'] = df['ExptNames'].str.contains('_SD')
+    df['Age'] = df['ExptNames'].str.extract(re.compile("(_[1-9]|10)[dD]"))
+    df['Age'] = pd.to_numeric(df['Age'].str[1])
+    df['Sex'] = df['ExptNames'].str.extract(r"_([FM])")
+    #Assign 5 to 'NaN' age
+    df['Age'] = df['Age'].fillna(5)
+    return df
 
 
 def split_video_by_annotation(idxpath, vidname):
