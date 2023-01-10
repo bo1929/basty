@@ -5,6 +5,7 @@ import subprocess
 import textwrap
 import time
 from collections import Counter
+import yaml
 
 import numpy as np
 import pandas as pd
@@ -54,6 +55,37 @@ def split_video_by_annotation(idxpath, vidname):
             f"ffmpeg -n -i {vidname} -ss {idx1} -to {idx2} " f"-c:v copy {outputname}"
         )
         subprocess.call(command, shell=True)
+
+def organize_file_structure(path):
+    """
+    Modifies the filenames of .csv files to match it with videos and returns a dictionary to be incorporated in the main_cfg.yaml
+    """
+    new_csv_names = []
+    folder_dict = {}
+
+    # Iterate over folders
+    for dirs in os.listdir(path):
+        avi_names = ([f for f in os.listdir(os.path.join(path, dirs)) if f.endswith('.avi') or f.endswith('.mp4')])
+        # Get the file in each folder that ends with .csv
+        csv_names = ([f for f in os.listdir(os.path.join(path, dirs)) if f.endswith('.csv')])
+
+        if len(avi_names) == 1 and len(csv_names) == 1:
+            new_csv_name = os.path.splitext(avi_names[0])[0] + '.csv'
+            new_csv_names.extend(new_csv_name)
+            os.rename(os.path.join(path, dirs, csv_names[0]), os.path.join(path, dirs, new_csv_name))
+            folder_dict[os.path.splitext(avi_names[0])[0]] = os.path.join(path, dirs)
+    return folder_dict
+
+def update_main_cfg(main_path,new_dict):
+    with open(main_path, 'r') as f:
+        config = yaml.safe_load(f)
+
+    config['experiment_data_paths'].update(new_dict)
+
+    with open(main_path, 'w') as f:
+        yaml.safe_dump(config, f)
+
+
 
 
 def convert_hour_to_HM(hour):
