@@ -42,8 +42,22 @@ def parse_experiment_names(data_path_dict):
     df['Age'] = df['ExptNames'].str.extract(re.compile("(_[1-9]|10)[dD]"))
     df['Age'] = pd.to_numeric(df['Age'].str[1])
     df['Sex'] = df['ExptNames'].str.extract(r"_([FM])")
-    #Assign 5 to 'NaN' age
+    #Assign 5 to 'NaN' age (if age is not listed, then it is 5 days old per expt protocols)
     df['Age'] = df['Age'].fillna(5)
+
+    def check_folders(folderpath):
+        txt_file = [file for file in os.listdir(folderpath) if 'CB' in file and file.endswith('.txt')]
+        if txt_file:
+            if 'annotated' not in txt_file[0]:
+                experimenter_name = os.path.splitext(txt_file[0])[0]
+            else:
+                experimenter_name = 'MK'
+        else:
+            experimenter_name = 'MK'
+        return experimenter_name
+
+    #Finaly check if each folder contains CB.txt files which indicates the experimenter. Assume MK if it is not existent
+    df['Experimenter'] = df['Path'].apply(lambda x: check_folders(x))
     return df
 
 
@@ -98,7 +112,15 @@ def update_main_cfg(main_path,new_dict):
     with open(main_path, 'w') as f:
         yaml.safe_dump(config, f)
 
-
+def update_expt_info_df(df, yaml_path):
+    """Updates the df containing experimental info with a supplemental configuration file that has the sex info
+    for flies without it """
+    with open(yaml_path, 'r') as f:
+        info = yaml.safe_load(f)
+    update_dict = info['sexlist']
+    for key in list(update_dict.keys()):
+        df['Sex'][df['ExptNames'] == key] = update_dict[key]
+    return df
 
 
 def convert_hour_to_HM(hour):
