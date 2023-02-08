@@ -1,11 +1,13 @@
 import itertools
 import logging
 import os
+from pathlib import Path
 import subprocess
 import textwrap
 import time
 from collections import Counter
 import yaml
+import basty.feature_extraction.body_pose as body_pose
 import re
 
 import numpy as np
@@ -121,6 +123,24 @@ def update_expt_info_df(df, yaml_path):
     for key in list(update_dict.keys()):
         df['Sex'][df['ExptNames'] == key] = update_dict[key]
     return df
+
+
+def get_likelihood(data_path_dict, body_parts):
+    """Loops through the data and loads likelihood scores for the desired body parts"""
+    out_df_list=[]
+    for keys, values in data_path_dict.items():
+        file_path = list(Path(values).glob(keys+'.csv'))[0]
+        ind = 'likelihood'
+        df_coord = pd.read_csv(file_path, low_memory=False)
+        sub_df = df_coord[df_coord.columns[df_coord.loc[1] == ind]]
+        sub_df.columns = sub_df.iloc[0]
+        sub_df = sub_df.drop([0, 1]).fillna(0).reset_index(drop=True)
+        sub_df['ExptName'] = keys
+        out_df_list.append(sub_df[sub_df.columns == body_parts])
+
+    out_df = pd.concat(out_df_list)
+    return out_df
+
 
 
 def convert_hour_to_HM(hour):
