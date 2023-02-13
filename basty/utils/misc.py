@@ -36,6 +36,7 @@ def sort_dict(x):
         return dict(sorted(x.items()))
     return x
 
+
 def parse_experiment_names(data_path_dict):
     """Takes in the name of the experiments and returns a dataframe containing
     sex,age and sleep deprivation info"""
@@ -44,7 +45,7 @@ def parse_experiment_names(data_path_dict):
     df['Age'] = df['ExptNames'].str.extract(re.compile("(_[1-9]|10)[dD]"))
     df['Age'] = pd.to_numeric(df['Age'].str[1])
     df['Sex'] = df['ExptNames'].str.extract(r"_([FM])")
-    #Assign 5 to 'NaN' age (if age is not listed, then it is 5 days old per expt protocols)
+    # Assign 5 to 'NaN' age (if age is not listed, then it is 5 days old per expt protocols)
     df['Age'] = df['Age'].fillna(5)
 
     def check_folders(folderpath):
@@ -58,7 +59,7 @@ def parse_experiment_names(data_path_dict):
             experimenter_name = 'MK'
         return experimenter_name
 
-    #Finaly check if each folder contains CB.txt files which indicates the experimenter. Assume MK if it is not existent
+    # Finaly check if each folder contains CB.txt files which indicates the experimenter. Assume MK if it is not existent
     df['Experimenter'] = df['Path'].apply(lambda x: check_folders(x))
     return df
 
@@ -85,6 +86,7 @@ def split_video_by_annotation(idxpath, vidname):
         )
         subprocess.call(command, shell=True)
 
+
 def organize_file_structure(path):
     """
     Modifies the filenames of .csv files to match it with videos and returns a dictionary to be incorporated in the main_cfg.yaml
@@ -105,7 +107,8 @@ def organize_file_structure(path):
             folder_dict[os.path.splitext(avi_names[0])[0]] = os.path.join(path, dirs)
     return folder_dict
 
-def update_main_cfg(main_path,new_dict):
+
+def update_main_cfg(main_path, new_dict):
     with open(main_path, 'r') as f:
         config = yaml.safe_load(f)
 
@@ -113,6 +116,7 @@ def update_main_cfg(main_path,new_dict):
 
     with open(main_path, 'w') as f:
         yaml.safe_dump(config, f)
+
 
 def update_expt_info_df(df, yaml_path):
     """Updates the df containing experimental info with a supplemental configuration file that has the sex info
@@ -125,22 +129,31 @@ def update_expt_info_df(df, yaml_path):
     return df
 
 
-def get_likelihood(data_path_dict, body_parts):
+def get_likelihood(data_path_dict):
     """Loops through the data and loads likelihood scores for the desired body parts"""
-    out_df_list=[]
+    out_df_list = []
     for keys, values in data_path_dict.items():
-        file_path = list(Path(values).glob(keys+'.csv'))[0]
+        file_path = list(Path(values).glob(keys + '.csv'))[0]
         ind = 'likelihood'
-        df_coord = pd.read_csv(file_path, low_memory=False)
-        sub_df = df_coord[df_coord.columns[df_coord.loc[1] == ind]]
-        sub_df.columns = sub_df.iloc[0]
-        sub_df = sub_df.drop([0, 1]).fillna(0).reset_index(drop=True)
-        sub_df['ExptName'] = keys
-        out_df_list.append(sub_df[sub_df.columns == body_parts])
+        #save likelihood
+        llh_path = os.path.join(values,keys + '_llh.pkl')
+        if not os.path.exists(llh_path):
+            # grab the header to create a new header for the df
+            header = pd.read_csv(file_path, nrows=3)
+            col_list = header.columns[header.loc[1] == ind]
+            head_list = header[col_list].loc[0].tolist()
+            df = pd.read_csv(file_path, skiprows=[0, 1, 2], header=None)
+            df = df.iloc[:, 3::3]
+            df.columns = head_list
+            df.to_pickle(llh_path)
+            df['ExptNames'] = keys
+        else:
+            df = pd.read_pickle(llh_path)
+            df['ExptNames'] = keys
+        out_df_list.append(df)
 
     out_df = pd.concat(out_df_list)
     return out_df
-
 
 
 def convert_hour_to_HM(hour):
@@ -201,8 +214,8 @@ def sliding_window(seq, winsize=3, stepsize=1):
     if winsize % 2 == 0:
         winsize = winsize + 1
     hw = (winsize - 1) // 2
-    p1 = [seq[0 : i + hw] for i in range(0, hw, stepsize)]
-    p2 = [seq[i - hw : i + hw] for i in range(hw, len(seq), stepsize)]
+    p1 = [seq[0: i + hw] for i in range(0, hw, stepsize)]
+    p2 = [seq[i - hw: i + hw] for i in range(hw, len(seq), stepsize)]
     return p1 + p2
 
 
@@ -216,7 +229,7 @@ def most_common(lst):
 def flatten(items, seqtypes=(list, tuple)):
     for i, _ in enumerate(items):
         while i < len(items) and isinstance(items[i], seqtypes):
-            items[i : i + 1] = items[i]
+            items[i: i + 1] = items[i]
     return items
 
 
