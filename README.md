@@ -9,6 +9,9 @@ Similar to many other behavior mapping pipelines, *basty* starts by computing a 
 Utilizing high-dimensional time-series representations, our software can detect **sleep epochs**, **micro-activities** (e.g., postural adjustment and short-duration grooming behaviors), and **macro-activities** (e.g., feeding and walking).
 Then, *basty* performs **high-performance behavior mapping** and allows a fine-grained categorization of the micro-activities by generating behavior embeddings and using a novel nearest neighbor-based prediction scheme.
 
+## Installation
+You can either clone the repository and crate a new virtual environment using poetry as decribed below in **Quickstart**, or simply use `pip install basty`.
+
 ## ⚡️ Quickstart
 1. Clone the repository, and change current directory to `basty/`.
   ``` bash
@@ -46,7 +49,7 @@ Then, *basty* performs **high-performance behavior mapping** and allows a fine-g
 7. Generate behavioral embedding space(s).
   At this step, you have different options (e.g., unsupervised or semi-supervised dimensionality reduction).
   For a detailed description and some tips, please see [Practical Guide](docs/Practical_Guide.md).
-  Assuming labeled data is available for semi-supervised behavior mapping, the following command generates semi-supervised pair embeddings (see [Nomenclature](docs/Nomenclature.md) for the definitions).
+  Assuming labeled data is available for semi-supervised behavior mapping, the following command generates semi-supervised pair embeddings.
   ```bash
   python map_behaviors.py --main-cfg-path /path/to/main_cfg.yaml --compute-semisupervised-pair-embeddings
   ```
@@ -63,7 +66,6 @@ Then, *basty* performs **high-performance behavior mapping** and allows a fine-g
 * [Practical Guide](docs/Practical_Guide.md)
 * [Folder Structure](docs/Folder_Structure.md)
 * [Configuration Files](docs/Configuration_Files.md)
-* [Nomenclature](docs/Nomenclature.md)
 
 ## References
 * [1] Mathis, Alexander, et al. "DeepLabCut: markerless pose estimation of user-defined body parts with deep learning." Nature neuroscience 21.9 (2018): 1281-1289.
