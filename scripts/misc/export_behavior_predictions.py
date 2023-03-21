@@ -19,11 +19,10 @@ parser.add_argument(
     required=True,
     help="Path to the main configuration file.",
 )
-parser.add_argument("--filter-behaviors", nargs="*")
 args = parser.parse_args()
 
 
-def export_behavior_predictions(project_obj, filter_behaviors):
+def export_behavior_predictions(project_obj):
     results_dir = project_obj.project_path / "results" / "semisupervised_pair_kNN"
     weights_directories = list(results_dir.glob("predictions*/weights*"))
 
@@ -44,9 +43,7 @@ def export_behavior_predictions(project_obj, filter_behaviors):
             weights_pred = np.load(weights_pred_path)
             weights_pred = uniform_filter1d(weights_pred, size=90, axis=0)  # 120?
             weights_pred = np.round(np.abs(normalize(weights_pred, norm="l1")), 5)
-            # export_df = misc.generate_bout_report(
-            #     weights_pred, label_to_behavior, filter_behaviors
-            # )
+
             export_df = pd.DataFrame(
                 weights_pred,
                 columns=[
@@ -54,17 +51,9 @@ def export_behavior_predictions(project_obj, filter_behaviors):
                     for i in range(weights_pred.shape[1])
                 ],
             )
-            export_df = export_df.filter(
-                items=[col for col in export_df.columns if col not in filter_behaviors]
-            )
 
             io.safe_create_dir(exports_dir)
-            if filter_behaviors is not None:
-                export_path = (
-                    exports_dir / f"{expt_name}-{'_'.join(filter_behaviors)}.csv"
-                )
-            else:
-                export_path = exports_dir / f"{expt_name}.csv"
+            export_path = exports_dir / f"{expt_name}.csv"
             export_df.to_csv(export_path)
 
 
@@ -73,4 +62,4 @@ if __name__ == "__main__":
         args.main_cfg_path,
     )
 
-    export_behavior_predictions(project, args.filter_behaviors)
+    export_behavior_predictions(project)
