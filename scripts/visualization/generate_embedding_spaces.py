@@ -210,7 +210,12 @@ def generate_semisupervised_pair(project_obj):
     unannotated_expt_names = list(set(all_expt_names) - set(annotated_expt_names))
     if project_obj.evaluation_mode:
         unannotated_expt_names = annotated_expt_names
-    pairs = [(name1, name2) for name1, name2 in pairs if name1 != name2]
+    pairs = [
+        (name1, name2)
+        for name1 in annotated_expt_names
+        for name2 in unannotated_expt_names
+        if name1 != name2
+    ]
     for expt_name_ann, expt_name_unann in pairs:
         expt_path_unann = project_obj.expt_path_dict[expt_name_unann]
         expt_path_ann = project_obj.expt_path_dict[expt_name_ann]
@@ -264,7 +269,7 @@ def generate_semisupervised_pair(project_obj):
             expt_record_ann,
             title={
                 "text": f"{expt_name_ann} (annotated)",
-                "subtitle": f"Semisupervised with {expt_name_ann} (unannotated)",
+                "subtitle": f"Semisupervised with {expt_name_unann} (unannotated)",
             },
         )
 

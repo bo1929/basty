@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "basty"
-version = "0.1.0"
+version = "0.1.01"
 description = "basty (Automated Behavioral Analysis of Asleep Fruit Fly) is a software designed to analyze behavioral correlates of sleep in Drosophila Melanogaster. The software consists of an end-to-end & multi-stage pipeline and a couple of useful scripts for behavioral analysis. basty is specifically designed for unique challenges related to the characteristics of sleep, so can deal with hard-to-detect behaviors exhibited rarely during long sleep cycles."
 authors = ["Ali Osman Berk Şapcı <aliosmanberk@sabanciuniv.edu>", "Mehmet Fatih Keleş <mkeles1@jhmi.edu>"]
 license = "MIT"
