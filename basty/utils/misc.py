@@ -9,6 +9,7 @@ from collections import Counter
 import yaml
 import basty.feature_extraction.body_pose as body_pose
 import re
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import pandas as pd
@@ -129,32 +130,34 @@ def update_expt_info_df(df, yaml_path):
     return df
 
 
-def get_likelihood(data_path_dict):
-    """Loops through the data and loads likelihood scores for the desired body parts"""
+def process_file(keys_values):
+    keys, values = keys_values
+    file_path = list(Path(values).glob(keys + '.csv'))[0]
+    ind = 'likelihood'
+    llh_path = os.path.join(values, keys + '_llh.pkl')
+
+    if not os.path.exists(llh_path):
+        header = pd.read_csv(file_path, nrows=3)
+        col_list = header.columns[header.loc[1] == ind]
+        head_list = header[col_list].loc[0].tolist()
+        df = pd.read_csv(file_path, skiprows=[0, 1, 2], header=None)
+        df = df.iloc[:, 3::3]
+        df.columns = head_list
+        df.to_pickle(llh_path)
+        df['ExptNames'] = keys
+    else:
+        df = pd.read_pickle(llh_path)
+        df['ExptNames'] = keys
+
+    return df
+
+def get_likelihood(data_path_dict, n_workers=None):
     out_df_list = []
-    for keys, values in data_path_dict.items():
-        file_path = list(Path(values).glob(keys + '.csv'))[0]
-        ind = 'likelihood'
-        #save likelihood
-        llh_path = os.path.join(values,keys + '_llh.pkl')
-        if not os.path.exists(llh_path):
-            # grab the header to create a new header for the df
-            header = pd.read_csv(file_path, nrows=3)
-            col_list = header.columns[header.loc[1] == ind]
-            head_list = header[col_list].loc[0].tolist()
-            df = pd.read_csv(file_path, skiprows=[0, 1, 2], header=None)
-            df = df.iloc[:, 3::3]
-            df.columns = head_list
-            df.to_pickle(llh_path)
-            df['ExptNames'] = keys
-        else:
-            df = pd.read_pickle(llh_path)
-            df['ExptNames'] = keys
-        out_df_list.append(df)
+    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+        out_df_list = list(executor.map(process_file, data_path_dict.items()))
 
     out_df = pd.concat(out_df_list)
     return out_df
-
 
 def convert_hour_to_HM(hour):
     return time.strftime("%H:%M", time.gmtime(float(hour) * 3600))
