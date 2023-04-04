@@ -151,12 +151,23 @@ def process_file(keys_values):
 
     return df
 
-def get_likelihood(data_path_dict, n_workers=None):
-    out_df_list = []
-    with ProcessPoolExecutor(max_workers=n_workers) as executor:
-        out_df_list = list(executor.map(process_file, data_path_dict.items()))
 
-    out_df = pd.concat(out_df_list)
+def get_likelihood(data_path_dict, CONFIG_PATH, force_import=False, n_workers=None):
+    output_path = os.path.join(os.path.dirname(CONFIG_PATH), 'llh_df.pickle')
+
+    if not force_import and os.path.exists(output_path):
+        print("Loading existing llh_df.pickle file...")
+        out_df = pd.read_pickle(output_path)
+    else:
+        out_df_list = []
+        with ProcessPoolExecutor(max_workers=n_workers) as executor:
+            out_df_list = list(executor.map(process_file, data_path_dict.items()))
+
+        out_df = pd.concat(out_df_list)
+
+        # Save the DataFrame as a .pickle file
+        out_df.to_pickle(output_path)
+
     return out_df
 
 def convert_hour_to_HM(hour):

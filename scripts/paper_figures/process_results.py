@@ -75,8 +75,9 @@ class BehaviorData:
 
             locator = matplotlib.ticker.IndexLocator(base=(2 * 60 * 60) / seconds, offset=0)
             ax.xaxis.set_major_locator(locator)
-            ax.set_xticklabels(zt_list)
-            save_fig(name, behavior, FIG_PATH)
+            _, ZT_ticklabels = BehaviorData.generate_tick_data()
+            ax.set_xticklabels(ZT_ticklabels)
+            BehaviorData.save_fig(name, behavior, fig_path)
 
     def resample_df(data, rate):
         data_df_list = []
@@ -89,3 +90,15 @@ class BehaviorData:
             data_df_all_rs = pd.concat(data_df_list)
 
             return data_df_all_rs
+
+
+    @staticmethod
+    def generate_tick_data(FPS=30,sd=False):
+
+        if sd == False:
+            xticks = np.arange(start=0, stop=FPS * 60 * 60 * 16 + 1, step=FPS * 60 * 60 * 2)
+        else:
+            xticks = np.arange(start=0, stop=FPS * 60 * 60 * 6 + 1, step=FPS * 60 * 60 * 2)
+        ZT_ticks = xticks
+        ZT_ticklabels = ['ZT' + str((tick+10)%24) for tick in range(0,len(xticks)*2,2)]
+        return ZT_ticks, ZT_ticklabels
