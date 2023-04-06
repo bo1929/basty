@@ -4,13 +4,17 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.ticker
-
+from scipy.ndimage import median_filter as medfilt
+import concurrent.futures
+import pickle
 
 class BehaviorData:
-    def __init__(self, fps=30, behaviors=None):
+    def __init__(self, data, fps=30, behaviors=None, binary_mask_threshold=0.8, window_size_median_filter=6):
         self.FPS = fps
         self.BEHAVIORS = behaviors if behaviors else []
-
+        self.data = data
+        self.binary_mask_threshold = binary_mask_threshold
+        self.window_size_median_filter = 6
     @staticmethod
     def get_time_stamp(idx, date="2022-01-01",FPS=30,):
         sec_total = idx // FPS
@@ -51,9 +55,9 @@ class BehaviorData:
     @staticmethod
     def _save_fig(name, behavior, fig_path):
         fig_name = os.path.join(fig_path, name + 'behavior_' + behavior + '.pdf')
-        svg_name = os.path.join(fig_path, name + 'behavior_' + behavior + '.svg')
-        plt.savefig(fig_name, dpi=300)
-        plt.savefig(svg_name)
+        #svg_name = os.path.join(fig_path, name + 'behavior_' + behavior + '.svg')
+        plt.savefig(fig_name, dpi=150)
+        #plt.savefig(svg_name)
 
     def plot_all_behaviors(self, data, name, fig_path):
         for behavior in self.BEHAVIORS:
@@ -105,3 +109,72 @@ class BehaviorData:
         ZT_ticks = xticks
         ZT_ticklabels = ['ZT' + str((tick+10)%24) for tick in range(0,len(xticks)*2,2)]
         return ZT_ticks, ZT_ticklabels
+
+    @staticmethod
+    def process_expt_name(expt_name, data, likelihood_data, threshold, window_size_median_filter, folder):
+        # Create a filename with ExptName, median_window_size, and threshold
+        filename = f"{expt_name}_median{window_size_median_filter}_threshold{threshold}.pkl"
+        file_path = os.path.join(folder, filename)
+
+        # Check if the file already exists; if so, skip the calculation and return None
+        if os.path.exists(file_path):
+            print(f"File {filename} already exists. Skipping calculation.")
+            return None
+
+        # Perform the calculations as before
+        sub_behavior_data = data[data['ExptNames'] == expt_name]
+        sub_likelihood_data = likelihood_data[likelihood_data['ExptNames'] == expt_name]
+
+        llh_filtered_resampled = BehaviorData._resample(sub_likelihood_data.prob.to_numpy(), window_size_median_filter,
+                                                        1)
+        sub_filtered_resampled = BehaviorData._resample(sub_behavior_data.ProboscisPumping.to_numpy(),
+                                                        window_size_median_filter, 1)
+
+        binary_mask = BehaviorData._create_binary_mask(llh_filtered_resampled, threshold)
+        masked_filtered_resampled = sub_filtered_resampled * binary_mask
+
+        temp_df = pd.DataFrame({
+            f'{expt_name}_unmasked': sub_filtered_resampled,
+            f'{expt_name}_masked': masked_filtered_resampled
+        })
+
+        # Save the resulting DataFrame as a pickle file
+        with open(file_path, 'wb') as file:
+            pickle.dump(temp_df, file)
+
+        return temp_df
+
+    def process_expt_names_parallel(self, likelihood_data, folder):
+        unique_expt_names = self.data['ExptNames'].unique()
+        result = pd.DataFrame()
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(BehaviorData.process_expt_name, expt_name, self.data, likelihood_data,
+                                       self.binary_mask_threshold, self.window_size_median_filter, folder) for expt_name
+                       in
+                       unique_expt_names]
+
+            for future in concurrent.futures.as_completed(futures):
+                temp_df = future.result()
+                if temp_df is not None:  # Only add the DataFrame to the result if it is not None (i.e., a new calculation)
+                    result = pd.concat([result, temp_df], axis=1)
+
+        return result
+
+
+    @staticmethod
+    def _median_filter(array, window_size):
+        filtered_array = medfilt(array, size=window_size)
+        return filtered_array
+    @staticmethod
+    def _resample(array, window_size, resampling_factor):
+        filtered_array = BehaviorData._median_filter(array, window_size)
+        resampled_array = filtered_array[::resampling_factor]
+        return resampled_array
+    @staticmethod
+    def _create_binary_mask(array, threshold):
+        array = np.asarray(array)
+        if array.ndim > 1:
+            raise ValueError("Input array should be 1-dimensional.")
+        binary_mask = np.where(array >= threshold, 1, 0)
+        return binary_mask
