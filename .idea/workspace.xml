@@ -4,9 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="45f2bdb0-af85-4673-898f-ceb734566293" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/scripts/paper_figures/input.py" afterDir="false" />
+    <list default="true" id="6f1ad260-2f9d-4198-a2ac-6d1284a88aae" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/scripts/paper_figures/plotter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/paper_figures/generate_figures.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/paper_figures/generate_figures.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/paper_figures/input.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/paper_figures/input.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/paper_figures/process_results.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/paper_figures/process_results.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -27,15 +29,17 @@
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
-  <component name="ProjectId" id="2NvTrDKlXwbCeNznZiujxsfG8n0" />
+  <component name="ProjectId" id="2O3ZCi9EaQV4wikiO8ApgYBiWcv" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
     "WebServerToolWindowFactoryState": "false",
     "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "C:/Users/Grover/Documents/GitHub/flysleepcl",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -45,70 +49,21 @@
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
-  <component name="PyConsoleOptionsProvider">
-    <option name="myPythonConsoleState">
-      <console-settings module-name="basty" is-module-sdk="true">
-        <option name="myUseModuleSdk" value="true" />
-        <option name="myModuleName" value="basty" />
-      </console-settings>
-    </option>
-  </component>
-  <component name="RunManager">
-    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
-      <module name="basty" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="true" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="45f2bdb0-af85-4673-898f-ceb734566293" name="Default Changelist" comment="" />
-      <created>1680543753251</created>
+      <changelist id="6f1ad260-2f9d-4198-a2ac-6d1284a88aae" name="Changes" comment="" />
+      <created>1680791099735</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1680543753251</updated>
-      <workItem from="1680543754489" duration="477000" />
-      <workItem from="1680544743264" duration="764000" />
-      <workItem from="1680545736521" duration="182000" />
-      <workItem from="1680546303553" duration="304000" />
-      <workItem from="1680546644556" duration="107000" />
-      <workItem from="1680546762043" duration="22000" />
-      <workItem from="1680547120376" duration="150000" />
-      <workItem from="1680547279641" duration="398000" />
-      <workItem from="1680547792392" duration="51951000" />
+      <updated>1680791099735</updated>
+      <workItem from="1680791100843" duration="138000" />
+      <workItem from="1680791249638" duration="9000" />
+      <workItem from="1680791265896" duration="26430000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
-  </component>
-  <component name="Vcs.Log.Tabs.Properties">
-    <option name="TAB_STATES">
-      <map>
-        <entry key="MAIN">
-          <value>
-            <State />
-          </value>
-        </entry>
-      </map>
-    </option>
   </component>
 </project>

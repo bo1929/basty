@@ -154,12 +154,12 @@ class BehaviorData:
                        in
                        unique_expt_names]
 
-            for future in concurrent.futures.as_completed(futures):
-                temp_df = future.result()
-                if temp_df is not None:  # Only add the DataFrame to the result if it is not None (i.e., a new calculation)
-                    result = pd.concat([result, temp_df], axis=1)
+        #for future in concurrent.futures.as_completed(futures):
+                #temp_df = future.result()
+                #if temp_df is not None:  # Only add the DataFrame to the result if it is not None (i.e., a new calculation)
+                    #result = pd.concat([result, temp_df], axis=1)
 
-        return result
+        #return result
 
 
     @staticmethod
@@ -178,3 +178,44 @@ class BehaviorData:
             raise ValueError("Input array should be 1-dimensional.")
         binary_mask = np.where(array >= threshold, 1, 0)
         return binary_mask
+
+    def create_binary_mask_from_behaviors(self, behaviors, target_behavior):
+        if target_behavior not in behaviors:
+            raise ValueError("Target behavior must be in the list of behaviors.")
+
+        # Filter the data to only include the specified behaviors and the ExptNames column
+        filtered_data = self.data[behaviors + ['ExptNames']]
+
+        # Group the data by ExptName
+        grouped_data = filtered_data.groupby('ExptNames')
+
+        # Initialize a dictionary to store the binary masks for each ExptName
+        binary_masks = {}
+
+        for expt_name, group in grouped_data:
+            # Determine the column label with the highest value for each row (frame)
+            max_column_label = group[behaviors].idxmax(axis=1)
+
+            # Create a binary mask based on the target_behavior
+            binary_mask = max_column_label.apply(lambda x: 1 if x == target_behavior else 0)
+
+            # Reset the index of the binary mask and drop the original index
+            binary_mask = binary_mask.reset_index(drop=True)
+
+            # Add the binary mask to the dictionary with the key as the ExptName
+            binary_masks[expt_name] = binary_mask
+
+        return binary_masks
+
+    @staticmethod
+    def update_dictionary_with_final_masked(dict_of_dfs, mask_dict, behavior):
+        updated_dict = dict_of_dfs.copy()
+
+        for expt_name in updated_dict.keys():
+            # Get the corresponding mask for the current ExptName
+            mask = mask_dict[expt_name]
+
+            # Multiply the '_masked' column with the mask and create a new '_final_masked' column
+            updated_dict[expt_name][f'{expt_name}_final_masked'] = updated_dict[expt_name][f'{expt_name}_masked'] * mask
+
+        return updated_dict
