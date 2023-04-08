@@ -2,6 +2,7 @@
 tags
 *.vim
 .flake8
+.idea
 
 # Any .csv, .pkl, .npy
 *.csv
