@@ -6,6 +6,7 @@ import glob
 import basty.project.experiment_processing as experiment_processing
 from basty.utils import misc
 
+
 class Input:
     def __init__(self, project, results_folder, tmp_result_folder):
         self.project = project
@@ -13,31 +14,35 @@ class Input:
         self.tmp_result_folder = tmp_result_folder
 
     def load_snap_fts(self, expt_name):
-        snap_path = os.path.join(self.project.project_path, expt_name, 'snap_stft.pkl')
-        snap_col_name = os.path.join(self.project.project_path, expt_name, 'ftname_to_snapft.yaml')
+        snap_path = os.path.join(self.project.project_path, expt_name, "snap_stft.pkl")
+        snap_col_name = os.path.join(
+            self.project.project_path, expt_name, "ftname_to_snapft.yaml"
+        )
 
-        with open(snap_path, 'rb') as file:
+        with open(snap_path, "rb") as file:
             snap_data = pickle.load(file)
 
-        with open(snap_col_name, 'r') as file:
+        with open(snap_col_name, "r") as file:
             col_names = yaml.safe_load(file)
 
         return snap_data, col_names
 
     def load_predictions(self):
-        csv_files = [file for file in os.listdir(self.results_folder) if file.endswith('.csv')]
+        csv_files = [
+            file for file in os.listdir(self.results_folder) if file.endswith(".csv")
+        ]
         dfs = list()
         for file in csv_files:
             data = pd.read_csv(os.path.join(self.results_folder, file))
-            data['ExptNames'] = os.path.splitext(file)[0]
+            data["ExptNames"] = os.path.splitext(file)[0]
             dfs.append(data)
 
         df_data = pd.concat(dfs, ignore_index=True)
-        df_data = df_data.rename(columns={'Unnamed: 0': 'Idx'})
+        df_data = df_data.rename(columns={"Unnamed: 0": "Idx"})
 
         return df_data
 
-    def load_expt_info(self, flysexpath = r'Y:\DeepSleepPaperData\flysexinfo.yaml'):
+    def load_expt_info(self, flysexpath=r"Y:\DeepSleepPaperData\flysexinfo.yaml"):
         data_path_dict = self.project.data_path_dict
         df = misc.parse_experiment_names(data_path_dict)
         df = misc.update_expt_info_df(df, flysexpath)
@@ -45,7 +50,7 @@ class Input:
         return df
 
     def create_binary_masks_subfolders(self, BEHAVIORS):
-        binary_masks_folder = os.path.join(self.tmp_result_folder, 'binary_masks')
+        binary_masks_folder = os.path.join(self.tmp_result_folder, "binary_masks")
 
         if not os.path.exists(binary_masks_folder):
             os.makedirs(binary_masks_folder)
@@ -57,7 +62,7 @@ class Input:
                 os.makedirs(behavior_subfolder)
 
     def get_binary_mask_subfolder(self, behavior):
-        binary_masks_folder = os.path.join(self.tmp_result_folder, 'binary_masks')
+        binary_masks_folder = os.path.join(self.tmp_result_folder, "binary_masks")
         behavior_subfolder = os.path.join(binary_masks_folder, behavior)
 
         if not os.path.exists(behavior_subfolder):
@@ -77,12 +82,12 @@ class Input:
 
         # Load each binary mask dataframe and store it in the dictionary
         for file in pickle_files:
-            with open(file, 'rb') as f:
+            with open(file, "rb") as f:
                 df = pickle.load(f)
 
             # Extract the ExptName from the file name
             file_basename = os.path.basename(file)
-            expt_name = file_basename[:file_basename.find("_median")]
+            expt_name = file_basename[: file_basename.find("_median")]
 
             # Store the dataframe in the dictionary with the ExptName as the key
             binary_mask_dataframes[expt_name] = df

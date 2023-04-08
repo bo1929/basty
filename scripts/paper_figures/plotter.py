@@ -1,10 +1,13 @@
 import math
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-class Plotter:
 
+
+class Plotter:
     @staticmethod
-    def plot_histograms(binary_mask_dataframes, lower_threshold=0, bins=50, filename='histograms.pdf'):
+    def plot_histograms(
+        binary_mask_dataframes, lower_threshold=0, bins=50, filename="histograms.pdf"
+    ):
         num_plots = len(binary_mask_dataframes)
         plots_per_page = 32
         num_pages = math.ceil(num_plots / plots_per_page)
@@ -14,7 +17,12 @@ class Plotter:
 
         with PdfPages(filename) as pdf:
             for page in range(num_pages):
-                fig, axes = plt.subplots(plots_per_col, plots_per_row, figsize=figsize, constrained_layout=True)
+                fig, axes = plt.subplots(
+                    plots_per_col,
+                    plots_per_row,
+                    figsize=figsize,
+                    constrained_layout=True,
+                )
 
                 for i in range(plots_per_col):
                     for j in range(plots_per_row):
@@ -31,9 +39,11 @@ class Plotter:
                         filtered_values = values[values >= lower_threshold]
 
                         # Plot the histogram for the current dataframe
-                        axes[i, j].hist(filtered_values, bins=bins, alpha=0.5, label=expt_name)
+                        axes[i, j].hist(
+                            filtered_values, bins=bins, alpha=0.5, label=expt_name
+                        )
                         axes[i, j].set_title(expt_name, fontsize=8)
-                        axes[i, j].tick_params(axis='both', which='major', labelsize=6)
+                        axes[i, j].tick_params(axis="both", which="major", labelsize=6)
 
                 # Save the current page to the PDF
                 pdf.savefig(fig)
