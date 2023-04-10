@@ -7,6 +7,9 @@ import matplotlib.ticker
 from scipy.ndimage import median_filter as medfilt
 import concurrent.futures
 import pickle
+import yaml
+import hashlib
+from input import Input
 
 
 class BehaviorData:
@@ -270,3 +273,84 @@ class BehaviorData:
             )
 
         return updated_dict
+
+
+    @staticmethod
+    def find_consecutive_bouts(data_dict, filter_size=3, padding=0):
+        bouts_dict = {}
+
+        for expt_name, df in data_dict.items():
+            # Get the column ending with "_final_masked"
+            final_masked_col = [col for col in df.columns if col.endswith("_final_masked")][0]
+
+            # Apply median filter to smooth out the binary signal
+            filtered_signal = medfilt(df[final_masked_col], size=filter_size)
+
+            # Find the bouts of consecutive 1s
+            bouts = []
+            start_index = None
+            for index, value in enumerate(filtered_signal):
+                if value >= 0.5:
+                    if start_index is None:
+                        start_index = index
+                else:
+                    if start_index is not None:
+                        bouts.append((start_index, index - 1))
+                        start_index = None
+
+            if start_index is not None:
+                bouts.append((start_index, index))
+
+            # Add padding to the bouts if specified
+            if padding > 0:
+                bouts = [(max(0, start - padding), min(df.index[-1], end + padding)) for start, end in bouts]
+
+            # Create a DataFrame for the bouts with start index, stop index, and region
+            bouts_df = pd.DataFrame(bouts, columns=["start_index", "stop_index"])
+            bouts_df["region"] = expt_name
+
+            # Add the DataFrame to the output dictionary
+            bouts_dict[expt_name] = bouts_df
+
+        return bouts_dict
+
+
+    @staticmethod
+    def shorten_col_name(col_name):
+        hash_object = hashlib.sha256(col_name.encode())
+        hex_dig = hash_object.hexdigest()
+        return hex_dig[:10]
+
+    @staticmethod
+    def find_consecutive_bouts_and_snap_fts(data_dict, io_process, filter_size=3, padding=0):
+        bouts_dict = {}
+
+        for expt_name, df in data_dict.items():
+            # Load the snap_stft data and column names for the current expt_name
+            snap_data, col_names = Input.load_snap_fts(io_process, expt_name)
+
+            # Shorten column names and create a mapping from original column names to shortened ones
+            short_col_names = {index: BehaviorData.shorten_col_name(col_name) for index, col_name in col_names.items()}
+
+            snap_df = pd.DataFrame(snap_data)
+            snap_df.rename(columns=short_col_names, inplace=True)
+
+            # Find consecutive bouts using the existing method
+            bouts_df = BehaviorData.find_consecutive_bouts(data_dict, filter_size=filter_size, padding=padding)[expt_name]
+
+            # Initialize new columns in bouts_df for each column in snap_df
+            for col in snap_df.columns:
+                bouts_df[col] = None
+
+            # For each row in bouts_df, extract data from snap_df for the start and stop indexes
+            for index, row in bouts_df.iterrows():
+                start_index, stop_index = row["start_index"], row["stop_index"]
+                snap_data = snap_df.loc[start_index:stop_index]
+
+                # Store the extracted data in the new columns of bouts_df
+                for col in snap_df.columns:
+                    bouts_df.at[index, col] = snap_data[col].values
+
+            bouts_dict[expt_name] = bouts_df
+
+        return bouts_dict
