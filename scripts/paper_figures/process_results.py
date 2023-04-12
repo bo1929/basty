@@ -1,14 +1,14 @@
-import os
 import numpy as np
-import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.ticker
 from scipy.ndimage import median_filter as medfilt
 import concurrent.futures
+import pandas as pd
 import pickle
-import yaml
-import hashlib
+import os
+from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor
 from input import Input
 
 
@@ -160,12 +160,13 @@ class BehaviorData:
         sub_behavior_data = data[data["ExptNames"] == expt_name]
         sub_likelihood_data = likelihood_data[likelihood_data["ExptNames"] == expt_name]
 
-        llh_filtered_resampled = BehaviorData._resample(
-            sub_likelihood_data.prob.to_numpy(), window_size_median_filter, 1
-        )
-        sub_filtered_resampled = BehaviorData._resample(
-            sub_behavior_data.ProboscisPumping.to_numpy(), window_size_median_filter, 1
-        )
+        # Apply median filter to the data
+        llh_filtered = BehaviorData._median_filter(sub_likelihood_data.prob.to_numpy(), window_size_median_filter)
+        sub_filtered = BehaviorData._median_filter(sub_behavior_data.ProboscisPumping.to_numpy(), window_size_median_filter)
+
+        # Resample the filtered data
+        llh_filtered_resampled = BehaviorData._resample(llh_filtered, 1)
+        sub_filtered_resampled = BehaviorData._resample(sub_filtered, 1)
 
         binary_mask = BehaviorData._create_binary_mask(
             llh_filtered_resampled, threshold
@@ -185,30 +186,7 @@ class BehaviorData:
 
         return temp_df
 
-    def process_expt_names_parallel(self, likelihood_data, folder):
-        unique_expt_names = self.data["ExptNames"].unique()
-        result = pd.DataFrame()
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [
-                executor.submit(
-                    BehaviorData.process_expt_name,
-                    expt_name,
-                    self.data,
-                    likelihood_data,
-                    self.binary_mask_threshold,
-                    self.window_size_median_filter,
-                    folder,
-                )
-                for expt_name in unique_expt_names
-            ]
-
-        # for future in concurrent.futures.as_completed(futures):
-        # temp_df = future.result()
-        # if temp_df is not None:  # Only add the DataFrame to the result if it is not None (i.e., a new calculation)
-        # result = pd.concat([result, temp_df], axis=1)
-
-        # return result
+    # Other functions...
 
     @staticmethod
     def _median_filter(array, window_size):
@@ -216,9 +194,8 @@ class BehaviorData:
         return filtered_array
 
     @staticmethod
-    def _resample(array, window_size, resampling_factor):
-        filtered_array = BehaviorData._median_filter(array, window_size)
-        resampled_array = filtered_array[::resampling_factor]
+    def _resample(array, resampling_factor):
+        resampled_array = array[::resampling_factor]
         return resampled_array
 
     @staticmethod
@@ -276,7 +253,7 @@ class BehaviorData:
 
 
     @staticmethod
-    def find_consecutive_bouts(data_dict, filter_size=3, padding=0):
+    def find_consecutive_bouts(data_dict, filter_size=60, padding=0, window_size=60):
         bouts_dict = {}
 
         for expt_name, df in data_dict.items():
@@ -286,17 +263,22 @@ class BehaviorData:
             # Apply median filter to smooth out the binary signal
             filtered_signal = medfilt(df[final_masked_col], size=filter_size)
 
-            # Find the bouts of consecutive 1s
+            # Find the bouts of consecutive 1s with a maximum break of up to window_size
             bouts = []
             start_index = None
+            zero_count = 0
             for index, value in enumerate(filtered_signal):
-                if value >= 0.5:
+                if value >= 0.1:
                     if start_index is None:
                         start_index = index
+                    zero_count = 0
                 else:
-                    if start_index is not None:
-                        bouts.append((start_index, index - 1))
-                        start_index = None
+                    zero_count += 1
+                    if zero_count > window_size:
+                        if start_index is not None:
+                            bouts.append((start_index, index - zero_count))
+                            start_index = None
+                            zero_count = 0
 
             if start_index is not None:
                 bouts.append((start_index, index))
@@ -314,43 +296,58 @@ class BehaviorData:
 
         return bouts_dict
 
-
     @staticmethod
-    def shorten_col_name(col_name):
-        hash_object = hashlib.sha256(col_name.encode())
-        hex_dig = hash_object.hexdigest()
-        return hex_dig[:10]
-
-    @staticmethod
-    def find_consecutive_bouts_and_snap_fts(data_dict, io_process, filter_size=3, padding=0):
+    def find_consecutive_bouts_and_snap_fts(data_dict, io_process, behavior_name, filter_size=3, padding=0,
+                                            num_workers=60, force_recalculate=False):
         bouts_dict = {}
+        main_output_folder = os.path.join(io_process.project.project_path, 'connected_bouts_w_snap_fts', behavior_name)
 
-        for expt_name, df in data_dict.items():
-            # Load the snap_stft data and column names for the current expt_name
-            snap_data, col_names = Input.load_snap_fts(io_process, expt_name)
+        if not os.path.exists(main_output_folder):
+            os.makedirs(main_output_folder)
 
-            # Shorten column names and create a mapping from original column names to shortened ones
-            short_col_names = {index: BehaviorData.shorten_col_name(col_name) for index, col_name in col_names.items()}
+        def process_expt_name(expt_name):
+            output_path = os.path.join(main_output_folder, f"{expt_name}.pkl")
 
-            snap_df = pd.DataFrame(snap_data)
-            snap_df.rename(columns=short_col_names, inplace=True)
+            if not force_recalculate and os.path.exists(output_path):
+                with open(output_path, "rb") as file:
+                    bouts_df = pickle.load(file)
+            else:
+                # Load the snap_stft data and column names for the current expt_name
+                snap_data, col_names = Input.load_snap_fts(io_process, expt_name)
 
-            # Find consecutive bouts using the existing method
-            bouts_df = BehaviorData.find_consecutive_bouts(data_dict, filter_size=filter_size, padding=padding)[expt_name]
+                snap_df = pd.DataFrame(snap_data)
+                snap_df.rename(columns=col_names, inplace=True)
 
-            # Initialize new columns in bouts_df for each column in snap_df
-            for col in snap_df.columns:
-                bouts_df[col] = None
+                # Find consecutive bouts using the existing method
+                bouts_df = BehaviorData.find_consecutive_bouts(data_dict, filter_size=filter_size, padding=padding)[expt_name]
 
-            # For each row in bouts_df, extract data from snap_df for the start and stop indexes
-            for index, row in bouts_df.iterrows():
-                start_index, stop_index = row["start_index"], row["stop_index"]
-                snap_data = snap_df.loc[start_index:stop_index]
-
-                # Store the extracted data in the new columns of bouts_df
+                # Initialize new columns in bouts_df for each column in snap_df
                 for col in snap_df.columns:
-                    bouts_df.at[index, col] = snap_data[col].values
+                    bouts_df[col] = None
 
-            bouts_dict[expt_name] = bouts_df
+                # For each row in bouts_df, extract data from snap_df for the start and stop indexes
+                for index, row in bouts_df.iterrows():
+                    start_index, stop_index = row["start_index"], row["stop_index"]
+                    snap_data = snap_df.loc[start_index:stop_index]
+
+                    # Store the extracted data in the new columns of bouts_df
+                    for col in snap_df.columns:
+                        bouts_df.at[index, col] = snap_data[col].values
+
+                # Save the resulting bouts_df as a pickle file in the specified folder
+                with open(output_path, "wb") as file:
+                    pickle.dump(bouts_df, file)
+
+            return expt_name, bouts_df
+
+        # Process expt_names in parallel and update the bouts_dict
+        with ThreadPoolExecutor(max_workers=num_workers) as executor:
+            futures = {executor.submit(process_expt_name, expt_name): expt_name for expt_name in data_dict.keys()}
+
+            for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures),
+                               desc="Processing Experiments"):
+                expt_name, bouts_df = future.result()
+                bouts_dict[expt_name] = bouts_df
 
         return bouts_dict
+
