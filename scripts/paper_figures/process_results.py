@@ -186,7 +186,30 @@ class BehaviorData:
 
         return temp_df
 
-    # Other functions...
+    def process_expt_names_parallel(self, likelihood_data, folder):
+        unique_expt_names = self.data["ExptNames"].unique()
+        result = pd.DataFrame()
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(
+                    BehaviorData.process_expt_name,
+                    expt_name,
+                    self.data,
+                    likelihood_data,
+                    self.binary_mask_threshold,
+                    self.window_size_median_filter,
+                    folder,
+                )
+                for expt_name in unique_expt_names
+            ]
+
+        # for future in concurrent.futures.as_completed(futures):
+        # temp_df = future.result()
+        # if temp_df is not None:  # Only add the DataFrame to the result if it is not None (i.e., a new calculation)
+        # result = pd.concat([result, temp_df], axis=1)
+
+        # return result
 
     @staticmethod
     def _median_filter(array, window_size):
@@ -251,9 +274,8 @@ class BehaviorData:
 
         return updated_dict
 
-
     @staticmethod
-    def find_consecutive_bouts(data_dict, filter_size=60, padding=0, window_size=60):
+    def find_consecutive_bouts(data_dict, filter_size=60, padding=0, window_size=180):
         bouts_dict = {}
 
         for expt_name, df in data_dict.items():
@@ -285,10 +307,30 @@ class BehaviorData:
 
             # Add padding to the bouts if specified
             if padding > 0:
-                bouts = [(max(0, start - padding), min(df.index[-1], end + padding)) for start, end in bouts]
+                padded_bouts = [(max(0, start - padding), min(df.index[-1], end + padding)) for start, end in bouts]
+            else:
+                padded_bouts = bouts
+
+            # Merge close intervals
+            merged_bouts = []
+            current_start = padded_bouts[0][0]
+            current_stop = padded_bouts[0][1]
+
+            for i in range(1, len(padded_bouts)):
+                next_start = padded_bouts[i][0]
+                next_stop = padded_bouts[i][1]
+
+                if next_start - current_stop <= window_size:
+                    current_stop = next_stop
+                else:
+                    merged_bouts.append((current_start, current_stop))
+                    current_start = next_start
+                    current_stop = next_stop
+
+            merged_bouts.append((current_start, current_stop))
 
             # Create a DataFrame for the bouts with start index, stop index, and region
-            bouts_df = pd.DataFrame(bouts, columns=["start_index", "stop_index"])
+            bouts_df = pd.DataFrame(merged_bouts, columns=["start_index", "stop_index"])
             bouts_df["region"] = expt_name
 
             # Add the DataFrame to the output dictionary
@@ -318,8 +360,12 @@ class BehaviorData:
                 snap_df = pd.DataFrame(snap_data)
                 snap_df.rename(columns=col_names, inplace=True)
 
-                # Find consecutive bouts using the existing method
-                bouts_df = BehaviorData.find_consecutive_bouts(data_dict, filter_size=filter_size, padding=padding)[expt_name]
+                # Find consecutive bouts for the current expt_name in data_dict
+                all_bouts = BehaviorData.find_consecutive_bouts({expt_name: data_dict[expt_name]},
+                                                                filter_size=filter_size, padding=padding)
+
+                # Get the consecutive bouts for the current expt_name
+                bouts_df = all_bouts[expt_name]
 
                 # Initialize new columns in bouts_df for each column in snap_df
                 for col in snap_df.columns:
@@ -350,4 +396,30 @@ class BehaviorData:
                 bouts_dict[expt_name] = bouts_df
 
         return bouts_dict
+
+    @staticmethod
+    def merge_close_intervals(data_dict, distance_threshold):
+        merged_data_dict = {}
+
+        for key, df in data_dict.items():
+            merged_df = pd.DataFrame(columns=df.columns)
+            current_start = df.loc[0, 'start_index']
+            current_stop = df.loc[0, 'stop_index']
+
+            for i in range(1, len(df)):
+                next_start = df.loc[i, 'start_index']
+                next_stop = df.loc[i, 'stop_index']
+
+                if next_start - current_stop <= distance_threshold:
+                    current_stop = next_stop
+                else:
+                    merged_df = merged_df.append({'start_index': current_start, 'stop_index': current_stop},
+                                                 ignore_index=True)
+                    current_start = next_start
+                    current_stop = next_stop
+
+            merged_df = merged_df.append({'start_index': current_start, 'stop_index': current_stop}, ignore_index=True)
+            merged_data_dict[key] = merged_df
+
+        return merged_data_dict
 
