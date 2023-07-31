@@ -10,6 +10,7 @@ import os
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
 from input import Input
+import multiprocessing
 
 
 class BehaviorData:
@@ -25,7 +26,7 @@ class BehaviorData:
         self.BEHAVIORS = behaviors if behaviors else []
         self.data = data
         self.binary_mask_threshold = binary_mask_threshold
-        self.window_size_median_filter = 6
+        self.window_size_median_filter = window_size_median_filter
 
     @staticmethod
     def get_time_stamp(
@@ -260,7 +261,7 @@ class BehaviorData:
         return binary_masks
 
     @staticmethod
-    def update_dictionary_with_final_masked(dict_of_dfs, mask_dict, behavior):
+    def update_dictionary_with_final_masked(dict_of_dfs, mask_dict):
         updated_dict = dict_of_dfs.copy()
 
         for expt_name in updated_dict.keys():
@@ -385,6 +386,13 @@ class BehaviorData:
                     pickle.dump(bouts_df, file)
 
             return expt_name, bouts_df
+
+        # Check the number of available CPUs
+        available_cpus = multiprocessing.cpu_count()
+
+        # Use the default number of workers if it's less than or equal to the available CPUs
+        # Otherwise, use half of the available CPUs
+        num_workers = num_workers if num_workers <= available_cpus else available_cpus // 2
 
         # Process expt_names in parallel and update the bouts_dict
         with ThreadPoolExecutor(max_workers=num_workers) as executor:

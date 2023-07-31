@@ -93,3 +93,17 @@ class Input:
             binary_mask_dataframes[expt_name] = df
 
         return binary_mask_dataframes
+
+    def get_prediction_result_folder(self, behavior):
+        predictions_folder = os.path.join(self.tmp_result_folder, "predictions")
+        if not os.path.exists(predictions_folder):
+            os.makedirs(predictions_folder)
+
+        behavior_folder = os.path.join(predictions_folder, behavior)
+        if not os.path.exists(behavior_folder):
+            os.makedirs(behavior_folder)
+
+        return behavior_folder
+
+
+

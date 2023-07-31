@@ -3,7 +3,10 @@ import os
 import time
 import moviepy.editor as mpy
 from typing import List
+
+
 def process_files(expt_info_path, bouts_dict_path):
+    """Creates a dataframe from predicted bouts and experimental info."""
     # Load the expt_info_df and bouts_dict from .pkl files
     expt_info_df = pd.read_pickle(expt_info_path)
     bouts_dict = pd.read_pickle(bouts_dict_path)
@@ -38,6 +41,7 @@ def process_files(expt_info_path, bouts_dict_path):
 
 
 def slice_and_save_videos(results_df: pd.DataFrame, output_dir: str) -> List[str]:
+    """Uses a dataframe with start stop and path information to slice predicted behavioral videos and saves them in the output folder"""
     saved_files = []
 
     # Ensure output directory exists
@@ -71,3 +75,29 @@ def slice_and_save_videos(results_df: pd.DataFrame, output_dir: str) -> List[str
             print(f"No .mp4 or .avi files found in directory: {row['Path']}")
 
     return saved_files
+
+
+def save_predicted_column_as_csv(data, column_name, output_folder):
+    """This function reads a dataframe that contains predictions for a given behavior
+    It then extracts the desired column to the output folder. Primarily used for generating
+    training data
+    # Example usage
+    data = pd.read_pickle(r'Z:\mfk\basty-projects\bouts_dict.pkl')
+    column_name = "distance.origin-prob"
+    output_folder = os.path.dirname(r"Z:\mfk\basty-projects\bouts_to_csv")
+
+    save_column_as_csv(data, column_name, output_folder)
+"""
+
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    for key, df in data.items():
+        output_path = os.path.join(output_folder, f"{key}.csv")
+        if column_name in df.columns:
+            time_series = df[column_name].apply(pd.Series)
+            time_series = time_series.T
+
+            time_series.to_csv(output_path, index=False)
+        else:
+            print(f"Column '{column_name}' does not exist in dataframe for key '{key}'")
