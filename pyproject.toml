@@ -18,6 +18,9 @@ umap-learn = "0.5.2"
 numpy = "1.21.5"
 scipy = "1.8.0"
 PyWavelets = "^1.2.0"
+moviepy = "^1.0.3"
+seaborn = "^0.12.2"
+jupyter = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

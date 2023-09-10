@@ -1,5 +1,6 @@
 import os
 
+#TODO: PASS FIG PATH TO DOWNSTREAM
 class Args:
     def __init__(self):
         self.CONFIG_PATH = r"Z:\mfk\basty-projects\main_cfg.yaml"
@@ -17,6 +18,7 @@ class Args:
             "ProboscisPumping",
         ]
         self.output_path = r'Z:\mfk\basty-projects'
+        self._get_tmp_result_folder()
 
     def _get_tmp_result_folder(self):
         tmp_result_folder = os.path.join(self.PROJECT_PATH,'tmp_results')
@@ -24,4 +26,4 @@ class Args:
         if not os.path.exists(tmp_result_folder):
             os.makedirs(tmp_result_folder)
 
-
+        self.TMP_RESULT_FOLDER = tmp_result_folder

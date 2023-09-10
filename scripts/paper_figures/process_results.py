@@ -78,9 +78,8 @@ class BehaviorData:
     @staticmethod
     def _save_fig(name, behavior, fig_path):
         fig_name = os.path.join(fig_path, name + "behavior_" + behavior + ".pdf")
-        # svg_name = os.path.join(fig_path, name + 'behavior_' + behavior + '.svg')
-        plt.savefig(fig_name, dpi=150)
-        # plt.savefig(svg_name)
+        plt.savefig(fig_name, dpi=300)
+
 
     def plot_all_behaviors(self, data, name, fig_path):
         for behavior in self.BEHAVIORS:

@@ -170,6 +170,7 @@ def get_likelihood(data_path_dict, CONFIG_PATH, force_import=False, n_workers=No
 
     return out_df
 
+
 def convert_hour_to_HM(hour):
     return time.strftime("%H:%M", time.gmtime(float(hour) * 3600))
 
@@ -287,6 +288,27 @@ def make_funcname_dict(*args):
     for item in args:
         dict_.update({item.__name__: item})
     return dict_
+
+
+def generate_tick_data(FPS=30, sd=False):
+    if not sd:
+        xticks = np.arange(
+            start=0, stop=FPS * 60 * 60 * 16 + 1, step=FPS * 60 * 60 * 2
+        )
+        ZT_ticks = xticks
+        ZT_ticklabels = [
+            "ZT" + str((tick + 10) % 24) for tick in range(0, len(xticks) * 2, 2)
+        ]
+    else:
+        xticks = np.arange(
+            start=0, stop=FPS * 60 * 60 * 6 + 1, step=FPS * 60 * 60 * 1
+        )
+        ZT_ticks = xticks
+        ZT_ticklabels = [
+            "ZT" + str((tick) % 24) for tick in range(0, len(xticks) * 1, 1)
+        ]
+
+    return ZT_ticks, ZT_ticklabels
 
 
 def timeit(f):

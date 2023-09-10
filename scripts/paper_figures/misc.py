@@ -3,6 +3,9 @@ import os
 import time
 import moviepy.editor as mpy
 from typing import List
+import numpy as np
+import joblib as jb
+from basty.utils import misc
 
 
 def process_files(expt_info_path, bouts_dict_path):
@@ -101,3 +104,20 @@ def save_predicted_column_as_csv(data, column_name, output_folder):
             time_series.to_csv(output_path, index=False)
         else:
             print(f"Column '{column_name}' does not exist in dataframe for key '{key}'")
+
+@staticmethod
+def generate_tick_data(FPS=30, sd=False):
+
+    if sd == False:
+        xticks = np.arange(
+            start=0, stop=FPS * 60 * 60 * 16 + 1, step=FPS * 60 * 60 * 2
+        )
+    else:
+        xticks = np.arange(
+            start=0, stop=FPS * 60 * 60 * 6 + 1, step=FPS * 60 * 60 * 2
+        )
+    ZT_ticks = xticks
+    ZT_ticklabels = [
+        "ZT" + str((tick + 10) % 24) for tick in range(0, len(xticks) * 2, 2)
+    ]
+    return ZT_ticks, ZT_ticklabels
