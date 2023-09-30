@@ -6,6 +6,7 @@ from basty.utils import misc  # Assuming you have a module named misc with the c
 import platform
 import pathlib
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 
 class ExperimentOutline:
@@ -92,26 +93,33 @@ class ExperimentOutline:
         outline_df_all = pd.concat(outline_df_list)
         return bout_df_all, outline_df_all
 
+    import matplotlib.pyplot as plt
+    import numpy as np
+
     @staticmethod
     def _plot_segments(ax, df, category_names, ZT_ticks, ZT_ticklabels):
+        # Set Arial as the default font
+        plt.rcParams['font.family'] = 'Arial'
+
         unique_experiments = [exp for exp in df['Experiment Name'].unique() if exp != "Fly06272022_M_5d_SD_A"]
         y_pos = np.arange(len(unique_experiments))
 
         ax.set_yticks(y_pos)
         ax.set_yticklabels(unique_experiments)
-        color_map = plt.get_cmap('RdYlGn')(np.linspace(0.15, 0.85, len(category_names)))
+
+        # Define custom color map using three specific colors
+        color_map = ['#377eb8', '#ff7f00', '#4daf4a']
 
         for i, experiment in enumerate(unique_experiments):
             sub_df = df[df['Experiment Name'] == experiment]
             for index, row in sub_df.iterrows():
                 start, finish, behavior = row['Start'], row['Finish'], row['Behavior']
                 color = color_map[category_names.index(behavior)]
-                ax.barh(i, finish - start, left=start, color=color, edgecolor='none')
+                ax.barh(i, finish - start, left=start, color=color, edgecolor='none', rasterized=True)
 
         ax.legend(category_names, ncol=len(category_names), bbox_to_anchor=(0, 1), loc='lower left', fontsize='small')
         ax.set_xticks(ZT_ticks)
         ax.set_xticklabels(ZT_ticklabels)
-
 
     @staticmethod
     def plot_ethogram(df, save_path=None):
@@ -127,6 +135,6 @@ class ExperimentOutline:
             ax.set_title(f"SD: {sd_val}, Sex: {sex_val}")
 
         if save_path:
-            plt.savefig(save_path, format='pdf')
+            plt.savefig(save_path, format='pdf',dpi=150)
         else:
             plt.show()
