@@ -15,24 +15,26 @@ import multiprocessing
 
 class BehaviorData:
     def __init__(
-        self,
-        data,
-        fps=30,
-        behaviors=None,
-        binary_mask_threshold=0.8,
-        window_size_median_filter=6,
+            self,
+            data,
+            fps=30,
+            behaviors=None,
+            binary_mask_threshold=0.8,
+            window_size_median_filter=6,
+            body_parts=None
     ):
         self.FPS = fps
         self.BEHAVIORS = behaviors if behaviors else []
         self.data = data
         self.binary_mask_threshold = binary_mask_threshold
         self.window_size_median_filter = window_size_median_filter
+        self.body_parts = body_parts
 
     @staticmethod
     def get_time_stamp(
-        idx,
-        date="2022-01-01",
-        FPS=30,
+            idx,
+            date="2022-01-01",
+            FPS=30,
     ):
         sec_total = idx // FPS
         second = sec_total % 60
@@ -79,7 +81,6 @@ class BehaviorData:
     def _save_fig(name, behavior, fig_path):
         fig_name = os.path.join(fig_path, name + "behavior_" + behavior + ".pdf")
         plt.savefig(fig_name, dpi=300)
-
 
     def plot_all_behaviors(self, data, name, fig_path):
         for behavior in self.BEHAVIORS:
@@ -141,9 +142,10 @@ class BehaviorData:
         ]
         return ZT_ticks, ZT_ticklabels
 
+    # TODO: ADD ABILITY TO LOAD LLH DATA WITH POST POSE ESTIMATION (WHICH SIDE OF THE FLY IS VISIBLE)
     @staticmethod
     def process_expt_name(
-        expt_name, data, likelihood_data, threshold, window_size_median_filter, folder
+            expt_name, data, likelihood_data, threshold, window_size_median_filter, folder, body_parts
     ):
         # Create a filename with ExptName, median_window_size, and threshold
         filename = (
@@ -155,14 +157,29 @@ class BehaviorData:
         if os.path.exists(file_path):
             print(f"File {filename} already exists. Skipping calculation.")
             return None
+        else:
+            print(f"Calculating for {expt_name}...")
 
         # Perform the calculations as before
         sub_behavior_data = data[data["ExptNames"] == expt_name]
         sub_likelihood_data = likelihood_data[likelihood_data["ExptNames"] == expt_name]
 
-        # Apply median filter to the data
-        llh_filtered = BehaviorData._median_filter(sub_likelihood_data.prob.to_numpy(), window_size_median_filter)
-        sub_filtered = BehaviorData._median_filter(sub_behavior_data.ProboscisPumping.to_numpy(), window_size_median_filter)
+        if body_parts is None:
+            # Value error missing body_parts
+            raise ValueError("Missing body_parts")
+        elif body_parts == "prob":
+            # Apply median filter to the data
+            llh_filtered = BehaviorData._median_filter(sub_likelihood_data.prob.to_numpy(), window_size_median_filter)
+            sub_filtered = BehaviorData._median_filter(sub_behavior_data.ProboscisPumping.to_numpy(),
+                                                       window_size_median_filter)
+        elif body_parts == 'halt':
+            # find the largest value between halt_l and halt_r for each row
+            sub_likelihood_data['halt_l'] = sub_likelihood_data[['halt_l', 'halt_r']].max(axis=1)
+
+            # Filter the data
+            sub_filtered = BehaviorData._median_filter(sub_behavior_data.HaltereSwitch.to_numpy(),
+                                                       window_size_median_filter)
+            llh_filtered = BehaviorData._median_filter(sub_likelihood_data.halt_l.to_numpy(), window_size_median_filter)
 
         # Resample the filtered data
         llh_filtered_resampled = BehaviorData._resample(llh_filtered, 1)
@@ -200,6 +217,7 @@ class BehaviorData:
                     self.binary_mask_threshold,
                     self.window_size_median_filter,
                     folder,
+                    self.body_parts
                 )
                 for expt_name in unique_expt_names
             ]
@@ -269,7 +287,7 @@ class BehaviorData:
 
             # Multiply the '_masked' column with the mask and create a new '_final_masked' column
             updated_dict[expt_name][f"{expt_name}_final_masked"] = (
-                updated_dict[expt_name][f"{expt_name}_masked"] * mask
+                    updated_dict[expt_name][f"{expt_name}_masked"] * mask
             )
 
         return updated_dict
@@ -429,5 +447,3 @@ class BehaviorData:
             merged_data_dict[key] = merged_df
 
         return merged_data_dict
-
-
