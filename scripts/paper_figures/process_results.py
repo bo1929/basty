@@ -145,7 +145,7 @@ class BehaviorData:
     # TODO: ADD ABILITY TO LOAD LLH DATA WITH POST POSE ESTIMATION (WHICH SIDE OF THE FLY IS VISIBLE)
     @staticmethod
     def process_expt_name(
-            expt_name, data, likelihood_data, threshold, window_size_median_filter, folder, body_parts
+            expt_name, data, likelihood_data, threshold, window_size_median_filter, folder, body_parts,BEHAVIORS
     ):
         # Create a filename with ExptName, median_window_size, and threshold
         filename = (
@@ -170,7 +170,11 @@ class BehaviorData:
         elif body_parts == "prob":
             # Apply median filter to the data
             llh_filtered = BehaviorData._median_filter(sub_likelihood_data.prob.to_numpy(), window_size_median_filter)
-            sub_filtered = BehaviorData._median_filter(sub_behavior_data.ProboscisPumping.to_numpy(),
+            if BEHAVIORS == "Feeding":
+                sub_filtered = BehaviorData._median_filter(sub_behavior_data.Feeding.to_numpy(),
+                                                           window_size_median_filter)
+            elif BEHAVIORS is []:
+                sub_filtered = BehaviorData._median_filter(sub_behavior_data.ProboscisPumping.to_numpy(),
                                                        window_size_median_filter)
         elif body_parts == 'halt':
             # find the largest value between halt_l and halt_r for each row
@@ -180,6 +184,12 @@ class BehaviorData:
             sub_filtered = BehaviorData._median_filter(sub_behavior_data.HaltereSwitch.to_numpy(),
                                                        window_size_median_filter)
             llh_filtered = BehaviorData._median_filter(sub_likelihood_data.halt_l.to_numpy(), window_size_median_filter)
+        elif body_parts == 'thor_post':
+            # Filter the data
+            sub_filtered = BehaviorData._median_filter(sub_behavior_data.Grooming.to_numpy(),
+                                                       window_size_median_filter)
+            llh_filtered = BehaviorData._median_filter(sub_likelihood_data.thor_post.to_numpy(),
+                                                       window_size_median_filter)
 
         # Resample the filtered data
         llh_filtered_resampled = BehaviorData._resample(llh_filtered, 1)
@@ -217,7 +227,8 @@ class BehaviorData:
                     self.binary_mask_threshold,
                     self.window_size_median_filter,
                     folder,
-                    self.body_parts
+                    self.body_parts,
+                    self.BEHAVIORS
                 )
                 for expt_name in unique_expt_names
             ]
@@ -292,6 +303,7 @@ class BehaviorData:
 
         return updated_dict
 
+    # TODO CHECK IF BOUT_IDX-WINDOW_SIZE IS NEGATIVE AND IF SO, SET IT TO 0
     @staticmethod
     def find_consecutive_bouts(data_dict, filter_size=60, padding=0, window_size=180):
         bouts_dict = {}
