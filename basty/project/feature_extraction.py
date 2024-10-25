@@ -46,12 +46,13 @@ class FeatureExtraction(Project):
 
                 for file_path in tqdm(sorted(file_path_list), leave=False, desc=name):
                     expt_partID = file_path.stem.split("-")[-1]
-                    expt_idx = (
-                        int(expt_partID)
-                        if re.compile("[0-9]" * 4).match(expt_partID)
-                        else 0
-                    )
-                    expt_idx_key.append(int(expt_idx))
+                    # Only set expt_idx if expt_partID is a four-digit number, else set to 0
+                    try:
+                        expt_idx = int(expt_partID) if re.fullmatch(r"\d{4}", expt_partID) else 0
+                    except ValueError:
+                        expt_idx = 0  # Default if there's no valid integer
+
+                    expt_idx_key.append(expt_idx)
 
                     df_coord = pd.read_csv(file_path, low_memory=False)
 
