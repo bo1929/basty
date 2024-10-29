@@ -55,7 +55,7 @@ You can either clone the repository and crate a new virtual environment using po
   ```
 8. Finally, you can map your unlabeled tracking data to defined behavior categories (with some sensible default parameters), and export predictions to a `.csv` file.
   ```bash
-  python predict_behavior_categories.py --main-cfg-path /path/to/main_cfg.yaml \
+  python predict_behavioral_categories.py --main-cfg-path /path/to/main_cfg.yaml \
     --num-neighbors 15 --neighbor-weights distance --neighbor-weights-norm log_count \
     --activation standard --voting soft
   python export_behavior_predictions.py --main-cfg-path /path/to/main_cfg.yaml
