@@ -1,4 +1,7 @@
 # basty
+
+[![DOI](https://zenodo.org/badge/464894927.svg)](https://doi.org/10.5281/zenodo.14143104)
+
 ## 🪰 Overview
 *basty* (Automated **B**ehavioral **A**nalysis of A**s**leep Frui**t** Fl**y**) is a software designed to analyze behavioral correlates of sleep in *Drosophila Melanogaster*.
 The software consists of an **end-to-end & multi-stage pipeline** and a couple of useful scripts for behavioral analysis.
